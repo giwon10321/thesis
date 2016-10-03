@@ -538,6 +538,14 @@ public:
    */
   void SetMacMaxFrameRetries (uint8_t retries);
 
+  Time GetDifsOfData (void) const;
+
+  void SetDifsOfData (Time difs);
+
+  Time GetSifsOfData (void) const;
+
+  void SetSifsOfData (Time difs);
+
   /**
    * TracedCallback signature for sent packets.
    *
@@ -559,7 +567,7 @@ public:
    */
   typedef void (* StateTracedCallback)
     (LrWpanMacState oldState, LrWpanMacState newState);
-  
+
 protected:
   // Inherited from Object.
   virtual void DoInitialize (void);
@@ -585,6 +593,8 @@ private:
 	void SendAckWithOptimization (uint8_t seqno, Ptr<Packet> p);
 
 	void SendRfeForEnergy (void);
+
+  void SendCfeAfterRfe (void);
 
 	void SendEnergyPulse (void);
 
@@ -828,6 +838,10 @@ private:
    * Scheduler event for a deferred MAC state change.
    */
   EventId m_setMacState;
+
+  Time m_sifsOfData;
+
+  Time m_difsOfData;
 };
 
 

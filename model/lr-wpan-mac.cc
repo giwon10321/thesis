@@ -256,7 +256,8 @@ LrWpanMac::McpsDataRequest (McpsDataRequestParams params, Ptr<Packet> p)
 void
 LrWpanMac::McpsRfeRequest (McpsDataRequestParams params)
 {
-	
+  Ptr<Packet> p = Create<Packet> (0);
+	McpsPacketRequest (LrWpanMacHeader::LRWPAN_MAC_RFE, params, p);
 }
 
 void
@@ -609,7 +610,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
             {
               m_macRxTrace (originalPkt);
 							//RF-MAC Reqeust For Energy Packet
-							if (receivedMacHdr.IsRfe () && receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff")
+							if (receivedMacHdr.IsRfe () && !m_mcpsDataIndicationCallback.IsNull ())
 								{
 									NS_LOG_DEBUG("PdDataIndication(): REF; forwarding up");
 									m_mcpsDataIndicationCallback(params, p);
@@ -737,15 +738,15 @@ LrWpanMac::SendAckWithOptimization (uint8_t seqno, Ptr<Packet> p)
   LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_ACKNOWLEDGMENT, seqno);
   LrWpanMacTrailer macTrailer;
 
-  Ptr<Packet> ackPacket = Create<Packet> (0); 
+  Ptr<Packet> ackPacket = Create<Packet> (0);
   ackPacket->AddHeader (macHdr);
 
   // Calculate FCS if the global attribute ChecksumEnable is set.
   if (Node::ChecksumEnabled ())
-    {    
+    {
       macTrailer.EnableFcs (true);
       macTrailer.SetFcs (ackPacket);
-    }    
+    }
   ackPacket->AddTrailer (macTrailer);
 
   // Enqueue the ACK packet for further processing
@@ -760,17 +761,21 @@ LrWpanMac::SendAckWithOptimization (uint8_t seqno, Ptr<Packet> p)
 void
 LrWpanMac::SendRfeForEnergy (void)
 {
-	LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RFE, 0);
-	macHdr.SetSrcAddrMode (2);
-	macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
+	McpsDataRequestParams params;
+  params.m_srcAddrMode = SHORT_ADDR;
+  params.m_dstAddrMode = SHORT_ADDR;
+  params.m_dstPanId = 0;
+  params.m_dstAddr = Mac16Address("ff:ff");
+  params.m_msduHandle = 0;
+  // params.m_txOptions = TX_OPTION_ACK;
 
-	macHdr.SetDstAddrMode (2);
-	macHdr.SetDstAddrFields (0, Mac16Address ("ff:ff"));
-	LrWpanMacTrailer macTrailer;
+	McpsRfeRequest (params);
+}
 
-	Ptr<Packet> rfePacket = Create<Packet> (0);
-	rfePacket->AddHeader (macHdr);
-	rfePacket->AddTrailer (macTrailer);
+
+void
+LrWpanMac::SendCfeAfterRfe (void)
+{
 
 }
 
@@ -1112,6 +1117,29 @@ void
 LrWpanMac::SetMacMaxFrameRetries (uint8_t retries)
 {
   m_macMaxFrameRetries = retries;
+}
+
+Time
+LrWpanMac::GetDifsOfData (void) const
+{
+  return m_difsOfData;
+}
+
+void
+LrWpanMac::SetDifsOfData(Time difs)
+{
+  m_difsOfData = difs;
+}
+
+Time
+LrWpanMac::GetSifsOfData(void) const
+{
+  return m_sifsOfData;
+}
+
+void
+LrWpanMac::SetSifsOfData(Time sifs) {
+  m_sifsOfData = sifs;
 }
 
 } // namespace ns3
