@@ -568,6 +568,10 @@ public:
   typedef void (* StateTracedCallback)
     (LrWpanMacState oldState, LrWpanMacState newState);
 
+	void SendRfeForEnergy (void);
+
+  void SendCfeAfterRfe (void);
+
 protected:
   // Inherited from Object.
   virtual void DoInitialize (void);
@@ -591,10 +595,6 @@ private:
   void SendAck (uint8_t seqno);
 
 	void SendAckWithOptimization (uint8_t seqno, Ptr<Packet> p);
-
-	void SendRfeForEnergy (void);
-
-  void SendCfeAfterRfe (void);
 
 	void SendEnergyPulse (void);
 
