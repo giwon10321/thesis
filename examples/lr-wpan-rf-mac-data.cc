@@ -41,20 +41,20 @@ using namespace ns3;
 
 static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
 {
-  NS_LOG_UNCOND ("Received packet of size " << p->GetSize ());
+  // NS_LOG_UNCOND ("Received packet of size " << p->GetSize ());
   // p->Print (std::cout);
 }
 
 static void DataConfirm (McpsDataConfirmParams params)
 {
-  NS_LOG_UNCOND ("LrWpanMcpsDataConfirmStatus = " << params.m_status);
+  // NS_LOG_UNCOND ("LrWpanMcpsDataConfirmStatus = " << params.m_status);
 }
 
 static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnumeration oldState, LrWpanPhyEnumeration newState)
 {
-  NS_LOG_UNCOND (context << " state change at " << now.GetSeconds ()
-                         << " from " << LrWpanHelper::LrWpanPhyEnumerationPrinter (oldState)
-                         << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
+  // NS_LOG_UNCOND (context << " state change at " << now.GetSeconds ()
+  //                        << " from " << LrWpanHelper::LrWpanPhyEnumerationPrinter (oldState)
+  //                        << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
 }
 
 int main (int argc, char *argv[])
@@ -84,8 +84,8 @@ int main (int argc, char *argv[])
   Ptr<Node> n2 = CreateObject <Node> ();
 
   Ptr<LrWpanSensorNetDevice> dev0 = CreateObject<LrWpanSensorNetDevice> ();
-  Ptr<LrWpanEdtNetDevice> dev1 = CreateObject<LrWpanEdtNetDevice> ();
-  Ptr<LrWpanEdtNetDevice> dev2 = CreateObject<LrWpanEdtNetDevice> ();
+  Ptr<LrWpanSensorNetDevice> dev1 = CreateObject<LrWpanSensorNetDevice> ();
+  Ptr<LrWpanSensorNetDevice> dev2 = CreateObject<LrWpanSensorNetDevice> ();
 
   dev0->SetAddress (Mac16Address ("00:01"));
   dev1->SetAddress (Mac16Address ("00:02"));
@@ -122,7 +122,7 @@ int main (int argc, char *argv[])
   dev1->GetPhy ()->SetMobility (sender1Mobility);
 
   Ptr<ConstantPositionMobilityModel> sender2Mobility = CreateObject<ConstantPositionMobilityModel> ();
-  sender2Mobility->SetPosition (Vector (0,-10,0));
+  sender2Mobility->SetPosition (Vector (0,-20,0));
   dev2->GetPhy ()->SetMobility (sender2Mobility);
 
   McpsDataConfirmCallback cb0;

@@ -58,7 +58,7 @@ static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnu
 
 int main (int argc, char *argv[])
 {
-  bool verbose = true;
+  bool verbose = false;
 
   CommandLine cmd;
 

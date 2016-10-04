@@ -303,6 +303,12 @@ LrWpanMacHeader::IsRfe (void) const
 }
 
 
+bool
+LrWpanMacHeader::IsCfe (void) const
+{
+  return(m_fctrlFrmType == LRWPAN_MAC_CFE);
+}
+
 
 bool
 LrWpanMacHeader::IsEnergy (void) const

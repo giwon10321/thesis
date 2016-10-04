@@ -267,6 +267,8 @@ public:
 
 	bool IsRfe (void) const;
 
+  bool IsCfe (void) const;
+
 	bool IsEnergy (void) const;
 
   /**

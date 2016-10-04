@@ -493,7 +493,7 @@ LrWpanMac::SetMcpsDataConfirmCallback (McpsDataConfirmCallback c)
 void
 LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 {
-  NS_ASSERT (m_lrWpanMacState == MAC_IDLE || m_lrWpanMacState == MAC_ACK_PENDING || m_lrWpanMacState == MAC_CSMA);
+  NS_ASSERT (m_lrWpanMacState == MAC_IDLE || m_lrWpanMacState == MAC_ACK_PENDING || m_lrWpanMacState == MAC_CSMA || m_lrWpanMacState == MAC_CFE_PENDING);
 
   NS_LOG_FUNCTION (this << psduLength << p << lqi);
 
@@ -622,15 +622,12 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
             {
               m_macRxTrace (originalPkt);
 							//RF-MAC Reqeust For Energy Packet
-							if (receivedMacHdr.IsRfe () && !m_mcpsDataIndicationCallback.IsNull ())
-								{
-									NS_LOG_DEBUG("PdDataIndication(): REF");
+              if (receivedMacHdr.IsRfe () || (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
+                {
                   m_setMacState.Cancel ();
                   ChangeMacState (MAC_IDLE);
-                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAck, this, receivedMacHdr.GetSeqNum ());
-                  
-									// m_mcpsDataIndicationCallback(params, p);
-								}
+                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendCfeAfterRfe, this);
+                }
               // \todo: What should we do if we receive a frame while waiting for an ACK?
               //        Especially if this frame has the ACK request bit set, should we reply with an ACK, possibly missing the pending ACK?
 
@@ -667,8 +664,14 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   NS_LOG_DEBUG ("PdDataIndication():  Packet is for me; forwarding up");
                   m_mcpsDataIndicationCallback (params, p);
                 }
+              else if (receivedMacHdr.IsRfe () && !m_mcpsDataIndicationCallback.IsNull ())
+                {
+                  NS_LOG_DEBUG("PdDataIndication():  REF");
+                  m_mcpsDataIndicationCallback(params, p);
+                }
               else if (receivedMacHdr.IsAcknowledgment () && m_txPkt && m_lrWpanMacState == MAC_ACK_PENDING)
                 {
+                  NS_LOG_DEBUG ("PdDataIndication():  ACK");
                   LrWpanMacHeader macHdr;
                   m_txPkt->PeekHeader (macHdr);
                   if (receivedMacHdr.GetSeqNum () == macHdr.GetSeqNum ())
@@ -704,6 +707,11 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                           m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
                         }
                     }
+                }
+              else if (receivedMacHdr.IsCfe () && m_txPkt && m_lrWpanMacState == MAC_CFE_PENDING)
+                {
+                  NS_LOG_DEBUG ("PdDataIndication():  CFE");
+                  // m_ackWaitTimeout.Cancel ();
                 }
             }
           else
@@ -767,7 +775,30 @@ LrWpanMac::SendRfeForEnergy (void)
 void
 LrWpanMac::SendCfeAfterRfe (void)
 {
+  NS_LOG_FUNCTION (this);
 
+  NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
+
+  // Generate a corresponding ACK Frame.
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_CFE, 0);
+  LrWpanMacTrailer macTrailer;
+  Ptr<Packet> ackPacket = Create<Packet> (0);
+  ackPacket->AddHeader (macHdr);
+  // Calculate FCS if the global attribute ChecksumEnable is set.
+  if (Node::ChecksumEnabled ())
+    {
+      macTrailer.EnableFcs (true);
+      macTrailer.SetFcs (ackPacket);
+    }
+  ackPacket->AddTrailer (macTrailer);
+
+  // Enqueue the ACK packet for further processing
+  // when the transmitter is activated.
+  m_txPkt = ackPacket;
+
+  // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
+  ChangeMacState (MAC_SENDING);
+  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
 }
 
 void
@@ -859,7 +890,7 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
   m_txPkt->PeekHeader (macHdr);
   if (status == IEEE_802_15_4_PHY_SUCCESS)
     {
-      if (!macHdr.IsAcknowledgment ())
+      if (!macHdr.IsAcknowledgment () && !macHdr.IsCfe ())
         {
           // We have just send a regular data packet, check if we have to wait
           // for an ACK.
@@ -871,7 +902,7 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
                 {
                   Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
                   NS_ASSERT (m_ackWaitTimeout.IsExpired ());
-                  m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
+                  // m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
                   m_setMacState.Cancel ();
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
                   return;
@@ -989,7 +1020,7 @@ LrWpanMac::PlmeSetTRXStateConfirm (LrWpanPhyEnumeration status)
       NS_ASSERT (status == IEEE_802_15_4_PHY_RX_ON || status == IEEE_802_15_4_PHY_SUCCESS || status == IEEE_802_15_4_PHY_TRX_OFF);
       // Do nothing special when going idle.
     }
-  else if (m_lrWpanMacState == MAC_ACK_PENDING)
+  else if (m_lrWpanMacState == MAC_ACK_PENDING || m_lrWpanMacState == MAC_CFE_PENDING)
     {
       NS_ASSERT (status == IEEE_802_15_4_PHY_RX_ON || status == IEEE_802_15_4_PHY_SUCCESS);
     }
@@ -1036,9 +1067,14 @@ LrWpanMac::SetLrWpanMacState (LrWpanMacState macState)
       ChangeMacState (MAC_ACK_PENDING);
       m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_RX_ON);
     }
+  else if (macState == MAC_CFE_PENDING)
+    {
+      ChangeMacState (MAC_CFE_PENDING);
+      m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_RX_ON);
+    }
   else if (macState == MAC_CSMA)
     {
-      NS_ASSERT (m_lrWpanMacState == MAC_IDLE || m_lrWpanMacState == MAC_ACK_PENDING);
+      NS_ASSERT (m_lrWpanMacState == MAC_IDLE || m_lrWpanMacState == MAC_ACK_PENDING || m_lrWpanMacState == MAC_CFE_PENDING);
 
       ChangeMacState (MAC_CSMA);
       m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_RX_ON);
