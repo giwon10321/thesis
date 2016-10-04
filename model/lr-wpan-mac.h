@@ -74,7 +74,8 @@ typedef enum
   MAC_ACK_PENDING,       //!< MAC_ACK_PENDING
   CHANNEL_ACCESS_FAILURE,//!< CHANNEL_ACCESS_FAILURE
   CHANNEL_IDLE,          //!< CHANNEL_IDLE
-  SET_PHY_TX_ON          //!< SET_PHY_TX_ON
+  SET_PHY_TX_ON,          //!< SET_PHY_TX_ON
+  MAC_CFE_PENDING
 } LrWpanMacState;
 
 namespace TracedValueCallback {
@@ -524,6 +525,8 @@ public:
    */
   uint64_t GetMacAckWaitDuration (void) const;
 
+  uint64_t GetMacCfeWaitDuration (void) const;
+
   /**
    * Get the macMaxFrameRetries attribute value.
    *
@@ -538,13 +541,17 @@ public:
    */
   void SetMacMaxFrameRetries (uint8_t retries);
 
+  Time GetSlotTimeOfEnergy (void) const;
+
+  Time GetSlotTimeOfData (void) const;
+
+  Time GetDifsOfEnergy (void) const;
+
   Time GetDifsOfData (void) const;
 
-  void SetDifsOfData (Time difs);
+  Time GetSifsOfEnergy (void) const;
 
   Time GetSifsOfData (void) const;
-
-  void SetSifsOfData (Time difs);
 
   /**
    * TracedCallback signature for sent packets.
@@ -839,9 +846,18 @@ private:
    */
   EventId m_setMacState;
 
+  Time m_slotTimeOfData;
+
+  Time m_slotTimeOfEnergy;
+
   Time m_sifsOfData;
 
+  Time m_sifsOfEnergy;
+
   Time m_difsOfData;
+
+  Time m_difsOfEnergy;
+
 };
 
 

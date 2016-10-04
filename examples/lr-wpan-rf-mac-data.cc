@@ -41,8 +41,8 @@ using namespace ns3;
 
 static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
 {
-  //NS_LOG_UNCOND ("Received packet of size " << p->GetSize ());
-  p->Print (std::cout);
+  NS_LOG_UNCOND ("Received packet of size " << p->GetSize ());
+  // p->Print (std::cout);
 }
 
 static void DataConfirm (McpsDataConfirmParams params)
@@ -81,12 +81,15 @@ int main (int argc, char *argv[])
   // Create 2 nodes, and a NetDevice for each one
   Ptr<Node> n0 = CreateObject <Node> ();
   Ptr<Node> n1 = CreateObject <Node> ();
+  Ptr<Node> n2 = CreateObject <Node> ();
 
   Ptr<LrWpanSensorNetDevice> dev0 = CreateObject<LrWpanSensorNetDevice> ();
-  Ptr<LrWpanNetDevice> dev1 = CreateObject<LrWpanNetDevice> ();
+  Ptr<LrWpanEdtNetDevice> dev1 = CreateObject<LrWpanEdtNetDevice> ();
+  Ptr<LrWpanEdtNetDevice> dev2 = CreateObject<LrWpanEdtNetDevice> ();
 
   dev0->SetAddress (Mac16Address ("00:01"));
   dev1->SetAddress (Mac16Address ("00:02"));
+  dev2->SetAddress (Mac16Address ("00:03"));
 
   // Each device must be attached to the same channel
   Ptr<SingleModelSpectrumChannel> channel = CreateObject<SingleModelSpectrumChannel> ();
@@ -97,14 +100,18 @@ int main (int argc, char *argv[])
 
   dev0->SetChannel (channel);
   dev1->SetChannel (channel);
+  dev2->SetChannel (channel);
+
 
   // To complete configuration, a LrWpanNetDevice must be added to a node
   n0->AddDevice (dev0);
   n1->AddDevice (dev1);
+  n2->AddDevice (dev2);
 
   // Trace state changes in the phy
   dev0->GetPhy ()->TraceConnect ("TrxState", std::string ("phy0"), MakeCallback (&StateChangeNotification));
   dev1->GetPhy ()->TraceConnect ("TrxState", std::string ("phy1"), MakeCallback (&StateChangeNotification));
+  dev2->GetPhy ()->TraceConnect ("TrxState", std::string ("phy2"), MakeCallback (&StateChangeNotification));
 
   Ptr<ConstantPositionMobilityModel> sender0Mobility = CreateObject<ConstantPositionMobilityModel> ();
   sender0Mobility->SetPosition (Vector (0,0,0));
@@ -113,6 +120,10 @@ int main (int argc, char *argv[])
   // Configure position 10 m distance
   sender1Mobility->SetPosition (Vector (0,10,0));
   dev1->GetPhy ()->SetMobility (sender1Mobility);
+
+  Ptr<ConstantPositionMobilityModel> sender2Mobility = CreateObject<ConstantPositionMobilityModel> ();
+  sender2Mobility->SetPosition (Vector (0,-10,0));
+  dev2->GetPhy ()->SetMobility (sender2Mobility);
 
   McpsDataConfirmCallback cb0;
   cb0 = MakeCallback (&DataConfirm);
@@ -130,6 +141,16 @@ int main (int argc, char *argv[])
   cb3 = MakeCallback (&DataIndication);
   dev1->GetMac ()->SetMcpsDataIndicationCallback (cb3);
 
+  McpsDataConfirmCallback cb4;
+  cb4 = MakeCallback (&DataConfirm);
+  dev2->GetMac ()->SetMcpsDataConfirmCallback (cb4);
+
+  McpsDataIndicationCallback cb5;
+  cb5 = MakeCallback (&DataIndication);
+  dev2->GetMac ()->SetMcpsDataIndicationCallback (cb5);
+
+
+
   // Tracing
   lrWpanHelper.EnablePcapAll (std::string ("lr-wpan-rf-mac-data"), true);
   AsciiTraceHelper ascii;
@@ -144,8 +165,8 @@ int main (int argc, char *argv[])
   params.m_srcAddrMode = SHORT_ADDR;
   params.m_dstAddrMode = SHORT_ADDR;
   params.m_dstPanId = 0;
-  params.m_dstAddr = Mac16Address ("00:03");
-  //params.m_dstAddr = Mac16Address::ConvertFrom (dev0->GetBroadcast ());
+  params.m_dstAddr = Mac16Address ("00:02");
+  // params.m_dstAddr = Mac16Address::ConvertFrom (dev0->GetBroadcast ());
   params.m_msduHandle = 0;
   params.m_txOptions = TX_OPTION_ACK;
 //  dev0->GetMac ()->McpsDataRequest (params, p0);
@@ -154,16 +175,24 @@ int main (int argc, char *argv[])
   p0->Print (std::cout);
   std::cout << std::endl;
 
-  Simulator::ScheduleWithContext (1, Seconds (0.0),
-                                  &LrWpanMac::McpsDataRequest,
-                                  dev0->GetMac (), params, p0);
+  // Simulator::ScheduleWithContext (1, Seconds (0.0),
+  //                                 &LrWpanMac::McpsDataRequest,
+  //                                 dev0->GetMac (), params, p0);
 
   // Send a packet back at time 2 seconds
-  Ptr<Packet> p2 = Create<Packet> (60);  // 60 bytes of dummy data
-  params.m_dstAddr = Mac16Address ("00:01");
-  Simulator::ScheduleWithContext (2, Seconds (2.0),
-                                  &LrWpanMac::McpsDataRequest,
-                                  dev1->GetMac (), params, p2);
+  // Ptr<Packet> p2 = Create<Packet> (60);  // 60 bytes of dummy data
+  // params.m_dstAddr = Mac16Address ("00:01");
+  // Simulator::ScheduleWithContext (2, Seconds (0.0),
+  //                                 &LrWpanMac::McpsDataRequest,
+  //                                 dev2->GetMac (), params, p0);
+
+  Simulator::ScheduleWithContext (1, Seconds(0.0),
+                                  &LrWpanMac::SendRfeForEnergy,
+                                  dev0->GetMac ());
+
+  // Simulator::ScheduleWithContext (1, Seconds(0.0),
+  //                                 &LrWpanMac::SendRfeForEnergy,
+  //                                 dev2->GetMac ());
 
   Simulator::Run ();
 

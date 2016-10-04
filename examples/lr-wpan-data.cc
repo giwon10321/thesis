@@ -58,7 +58,7 @@ static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnu
 
 int main (int argc, char *argv[])
 {
-  bool verbose = false;
+  bool verbose = true;
 
   CommandLine cmd;
 
@@ -108,7 +108,7 @@ int main (int argc, char *argv[])
   dev0->GetPhy ()->SetMobility (sender0Mobility);
   Ptr<ConstantPositionMobilityModel> sender1Mobility = CreateObject<ConstantPositionMobilityModel> ();
   // Configure position 10 m distance
-  sender1Mobility->SetPosition (Vector (0,10,0));
+  sender1Mobility->SetPosition (Vector (0,20,0));
   dev1->GetPhy ()->SetMobility (sender1Mobility);
 
   McpsDataConfirmCallback cb0;

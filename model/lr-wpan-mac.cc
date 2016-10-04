@@ -145,6 +145,13 @@ LrWpanMac::LrWpanMac ()
   m_numCsmacaRetry = 0;
   m_txPkt = 0;
 
+  m_slotTimeOfData = MicroSeconds (10);
+  m_slotTimeOfEnergy = MicroSeconds (20);
+  m_sifsOfData = MicroSeconds (10);
+  m_sifsOfEnergy = MicroSeconds (5);
+  m_difsOfData = MicroSeconds (50);
+  m_difsOfEnergy = MicroSeconds (25);
+
   Ptr<UniformRandomVariable> uniformVar = CreateObject<UniformRandomVariable> ();
   uniformVar->SetAttribute ("Min", DoubleValue (0.0));
   uniformVar->SetAttribute ("Max", DoubleValue (255.0));
@@ -341,6 +348,11 @@ LrWpanMac::McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataReque
       if (!(macHdr.GetDstAddrMode () == SHORT_ADDR && macHdr.GetShortDstAddr () == "ff:ff"))
         {
           macHdr.SetAckReq ();
+        }
+
+      if (type == LrWpanMacHeader::LRWPAN_MAC_RFE)
+        {
+          macHdr.SetAckReq ();  
         }
     }
   else if (b0 == 0)
@@ -612,8 +624,12 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 							//RF-MAC Reqeust For Energy Packet
 							if (receivedMacHdr.IsRfe () && !m_mcpsDataIndicationCallback.IsNull ())
 								{
-									NS_LOG_DEBUG("PdDataIndication(): REF; forwarding up");
-									m_mcpsDataIndicationCallback(params, p);
+									NS_LOG_DEBUG("PdDataIndication(): REF");
+                  m_setMacState.Cancel ();
+                  ChangeMacState (MAC_IDLE);
+                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAck, this, receivedMacHdr.GetSeqNum ());
+                  
+									// m_mcpsDataIndicationCallback(params, p);
 								}
               // \todo: What should we do if we receive a frame while waiting for an ACK?
               //        Especially if this frame has the ACK request bit set, should we reply with an ACK, possibly missing the pending ACK?
@@ -730,32 +746,7 @@ LrWpanMac::SendAck (uint8_t seqno)
 void
 LrWpanMac::SendAckWithOptimization (uint8_t seqno, Ptr<Packet> p)
 {
-  NS_LOG_FUNCTION (this << static_cast<uint32_t> (seqno));
-
-  NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
-
-  // Generate a corresponding ACK Frame.
-  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_ACKNOWLEDGMENT, seqno);
-  LrWpanMacTrailer macTrailer;
-
-  Ptr<Packet> ackPacket = Create<Packet> (0);
-  ackPacket->AddHeader (macHdr);
-
-  // Calculate FCS if the global attribute ChecksumEnable is set.
-  if (Node::ChecksumEnabled ())
-    {
-      macTrailer.EnableFcs (true);
-      macTrailer.SetFcs (ackPacket);
-    }
-  ackPacket->AddTrailer (macTrailer);
-
-  // Enqueue the ACK packet for further processing
-  // when the transmitter is activated.
-  m_txPkt = ackPacket;
-
-  // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
-  ChangeMacState (MAC_SENDING);
-  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
+  
 }
 
 void
@@ -767,7 +758,7 @@ LrWpanMac::SendRfeForEnergy (void)
   params.m_dstPanId = 0;
   params.m_dstAddr = Mac16Address("ff:ff");
   params.m_msduHandle = 0;
-  // params.m_txOptions = TX_OPTION_ACK;
+  params.m_txOptions = TX_OPTION_ACK;
 
 	McpsRfeRequest (params);
 }
@@ -876,12 +867,24 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
             {
               // wait for the ack or the next retransmission timeout
               // start retransmission timer
-              Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
-              NS_ASSERT (m_ackWaitTimeout.IsExpired ());
-              m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
-              m_setMacState.Cancel ();
-              m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_ACK_PENDING);
-              return;
+              if (macHdr.IsRfe ())
+                {
+                  Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
+                  NS_ASSERT (m_ackWaitTimeout.IsExpired ());
+                  m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
+                  m_setMacState.Cancel ();
+                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
+                  return;
+                }
+              else
+                {
+                  Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
+                  NS_ASSERT (m_ackWaitTimeout.IsExpired ());
+                  m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
+                  m_setMacState.Cancel ();
+                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_ACK_PENDING);
+                  return;
+                }
             }
           else
             {
@@ -1107,6 +1110,13 @@ LrWpanMac::GetMacAckWaitDuration (void) const
          + ceil (6 * m_phy->GetPhySymbolsPerOctet ());
 }
 
+uint64_t
+LrWpanMac::GetMacCfeWaitDuration (void) const
+{
+  return m_csmaCa->GetUnitBackoffPeriod () + m_phy->aTurnaroundTime + m_phy->GetPhySHRDuration ()
+         + ceil (6 * m_phy->GetPhySymbolsPerOctet ());  
+}
+
 uint8_t
 LrWpanMac::GetMacMaxFrameRetries (void) const
 {
@@ -1120,15 +1130,33 @@ LrWpanMac::SetMacMaxFrameRetries (uint8_t retries)
 }
 
 Time
+LrWpanMac::GetSlotTimeOfEnergy (void) const
+{
+  return m_slotTimeOfEnergy;
+}
+
+Time
+LrWpanMac::GetSlotTimeOfData (void) const
+{
+  return m_slotTimeOfData;
+}
+
+Time
+LrWpanMac::GetDifsOfEnergy (void) const
+{
+  return m_difsOfEnergy;
+}
+
+Time
 LrWpanMac::GetDifsOfData (void) const
 {
   return m_difsOfData;
 }
 
-void
-LrWpanMac::SetDifsOfData(Time difs)
+Time
+LrWpanMac::GetSifsOfEnergy (void) const
 {
-  m_difsOfData = difs;
+  return m_sifsOfEnergy;
 }
 
 Time
@@ -1137,9 +1165,5 @@ LrWpanMac::GetSifsOfData(void) const
   return m_sifsOfData;
 }
 
-void
-LrWpanMac::SetSifsOfData(Time sifs) {
-  m_sifsOfData = sifs;
-}
 
 } // namespace ns3

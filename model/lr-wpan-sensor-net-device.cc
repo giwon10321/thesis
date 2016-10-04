@@ -53,5 +53,10 @@ LrWpanSensorNetDevice::GetResidualEnergy (void) const
 	return m_residualEnergy;
 }
 
+void
+LrWpanSensorNetDevice::SendRfe (void)
+{
+	GetMac()->SendRfeForEnergy ();
+}
 
 }//namespace ns3

@@ -17,6 +17,8 @@ public:
 	double GetResidualEnergy (void) const;
 
 private:
+	void SendRfe (void);
+
 	double m_residualEnergy;
 	double m_threshold_voltage;
 };

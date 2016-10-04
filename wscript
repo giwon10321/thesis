@@ -15,7 +15,8 @@ def build(bld):
         'model/lr-wpan-spectrum-signal-parameters.cc',
         'model/lr-wpan-lqi-tag.cc',
         'helper/lr-wpan-helper.cc',
-				'model/lr-wpan-sensor-net-device.cc',
+		'model/lr-wpan-sensor-net-device.cc',
+        'model/lr-wpan-edt-net-device.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('lr-wpan')
@@ -45,7 +46,8 @@ def build(bld):
         'model/lr-wpan-spectrum-signal-parameters.h',
         'model/lr-wpan-lqi-tag.h',
         'helper/lr-wpan-helper.h',
-				'model/lr-wpan-sensor-net-device.h',
+		'model/lr-wpan-sensor-net-device.h',
+        'model/lr-wpan-edt-net-device.h',
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):
