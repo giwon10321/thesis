@@ -622,7 +622,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
             {
               m_macRxTrace (originalPkt);
 							//RF-MAC Reqeust For Energy Packet
-              if (receivedMacHdr.IsRfe () || (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
+              if (receivedMacHdr.IsRfe () && (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
                 {
                   m_setMacState.Cancel ();
                   ChangeMacState (MAC_IDLE);
@@ -666,7 +666,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                 }
               else if (receivedMacHdr.IsRfe () && !m_mcpsDataIndicationCallback.IsNull ())
                 {
-                  NS_LOG_DEBUG("PdDataIndication():  REF");
+                  NS_LOG_DEBUG("PdDataIndication():  RFE");
                   m_mcpsDataIndicationCallback(params, p);
                 }
               else if (receivedMacHdr.IsAcknowledgment () && m_txPkt && m_lrWpanMacState == MAC_ACK_PENDING)
@@ -720,6 +720,12 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
             }
         }
     }
+}
+
+void
+LrWpanMac::PdEnergyIndication (double energy)
+{
+  NS_LOG_FUNCTION (this << energy);
 }
 
 void
@@ -781,6 +787,11 @@ LrWpanMac::SendCfeAfterRfe (void)
 
   // Generate a corresponding ACK Frame.
   LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_CFE, 0);
+  macHdr.SetSrcAddrMode (SHORT_ADDR);
+  macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
+  macHdr.SetDstAddrMode (SHORT_ADDR);
+  macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
+
   LrWpanMacTrailer macTrailer;
   Ptr<Packet> ackPacket = Create<Packet> (0);
   ackPacket->AddHeader (macHdr);
@@ -1000,7 +1011,7 @@ LrWpanMac::PlmeSetTRXStateConfirm (LrWpanPhyEnumeration status)
 {
   NS_LOG_FUNCTION (this << status);
 
-  if (m_lrWpanMacState == MAC_SENDING && (status == IEEE_802_15_4_PHY_TX_ON || status == IEEE_802_15_4_PHY_SUCCESS))
+  if (m_lrWpanMacState == MAC_SENDING && (status == IEEE_802_15_4_PHY_TX_ON || status == IEEE_802_15_4_PHY_SUCCESS || PHY_ENERGY_TX))
     {
       NS_ASSERT (m_txPkt);
 
@@ -1070,7 +1081,7 @@ LrWpanMac::SetLrWpanMacState (LrWpanMacState macState)
   else if (macState == MAC_CFE_PENDING)
     {
       ChangeMacState (MAC_CFE_PENDING);
-      m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_RX_ON);
+      m_phy->PlmeSetTRXStateRequest (PHY_ENERGY_RX);
     }
   else if (macState == MAC_CSMA)
     {

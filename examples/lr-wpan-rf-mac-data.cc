@@ -52,9 +52,9 @@ static void DataConfirm (McpsDataConfirmParams params)
 
 static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnumeration oldState, LrWpanPhyEnumeration newState)
 {
-  // NS_LOG_UNCOND (context << " state change at " << now.GetSeconds ()
-  //                        << " from " << LrWpanHelper::LrWpanPhyEnumerationPrinter (oldState)
-  //                        << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
+  NS_LOG_UNCOND (context << " state change at " << now.GetSeconds ()
+                         << " from " << LrWpanHelper::LrWpanPhyEnumerationPrinter (oldState)
+                         << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
 }
 
 int main (int argc, char *argv[])

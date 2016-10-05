@@ -104,12 +104,13 @@ LrWpanHelper::EnableLogComponents (void)
   LogComponentEnableAll (LOG_PREFIX_FUNC);
   // LogComponentEnable ("LrWpanCsmaCa", LOG_LEVEL_ALL);
   // LogComponentEnable ("LrWpanErrorModel", LOG_LEVEL_ALL);
-  LogComponentEnable ("LrWpanInterferenceHelper", LOG_LEVEL_ALL);
+  // LogComponentEnable ("LrWpanInterferenceHelper", LOG_LEVEL_ALL);
   LogComponentEnable ("LrWpanMac", LOG_LEVEL_ALL);
   // LogComponentEnable ("LrWpanNetDevice", LOG_LEVEL_ALL);
   LogComponentEnable ("LrWpanPhy", LOG_LEVEL_ALL);
   // LogComponentEnable ("LrWpanSpectrumSignalParameters", LOG_LEVEL_ALL);
   // LogComponentEnable ("LrWpanSpectrumValueHelper", LOG_LEVEL_ALL);
+  LogComponentEnable ("SingleModelSpectrumChannel", LOG_LEVEL_ALL);
 }
 
 std::string
@@ -141,6 +142,10 @@ LrWpanHelper::LrWpanPhyEnumerationPrinter (LrWpanPhyEnumeration e)
       return std::string ("UNSUPPORTED_ATTRIBUTE");
     case IEEE_802_15_4_PHY_READ_ONLY:
       return std::string ("READ_ONLY");
+    case PHY_ENERGY_TX:
+      return std::string ("ENERGY_TX");
+    case PHY_ENERGY_RX:
+      return std::string ("ENERGY_RX");
     case IEEE_802_15_4_PHY_UNSPECIFIED:
       return std::string ("UNSPECIFIED");
     default:

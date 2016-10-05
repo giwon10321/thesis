@@ -116,7 +116,9 @@ typedef enum
   IEEE_802_15_4_PHY_TX_ON = 0x09,
   IEEE_802_15_4_PHY_UNSUPPORTED_ATTRIBUTE = 0xa,
   IEEE_802_15_4_PHY_READ_ONLY = 0xb,
-  IEEE_802_15_4_PHY_UNSPECIFIED = 0xc // all cases not covered by ieee802.15.4
+  PHY_ENERGY_RX = 0xc,
+  PHY_ENERGY_TX = 0xd,
+  IEEE_802_15_4_PHY_UNSPECIFIED = 0xe // all cases not covered by ieee802.15.4
 } LrWpanPhyEnumeration;
 
 namespace TracedValueCallback
@@ -176,6 +178,8 @@ typedef struct
  *  @param lqi Link quality (LQI) value measured during reception of the PPDU
  */
 typedef Callback< void, uint32_t, Ptr<Packet>, uint8_t > PdDataIndicationCallback;
+
+typedef Callback< void, double > PdEnergyIndicationCallback;
 
 /**
  * \ingroup lr-wpan
@@ -381,6 +385,9 @@ public:
    * @param c the callback
    */
   void SetPdDataIndicationCallback (PdDataIndicationCallback c);
+  
+
+  void SetPdEnergyIndicationCallback (PdEnergyIndicationCallback c);
 
   /**
    * set the callback for the end of a TX, as part of the
@@ -555,6 +562,8 @@ private:
    * \param params signal parameters of the packet
    */
   void EndRx (Ptr<SpectrumSignalParameters> params);
+
+  void EndEnergyRx (void);
 
   /**
    * Cancel an ongoing ED procedure. This is called when the transceiver is
@@ -731,6 +740,8 @@ private:
    */
   PdDataIndicationCallback m_pdDataIndicationCallback;
 
+  PdEnergyIndicationCallback m_pdEnergyIndicationCallback;
+
   /**
    * This callback is used to report packet transmission status to the MAC layer.
    * See IEEE 802.15.4-2006, section 6.2.1.2.
@@ -807,6 +818,10 @@ private:
    */
   std::pair<Ptr<LrWpanSpectrumSignalParameters>, bool>  m_currentRxPacket;
 
+  std::vector<std::pair<Ptr<LrWpanSpectrumSignalParameters>, bool> > m_receivedRxPackets;
+
+  double m_receivedEnergy;
+
   /**
    * Statusinformation of the currently transmitted packet. The first parameter
    * contains the frame. The second parameter is set to false, if the frame not
@@ -834,6 +849,9 @@ private:
    * Scheduler event of a currently running data transmission request.
    */
   EventId m_pdDataRequest;
+
+
+  EventId m_energyRx;
 
   /**
    * Uniform random variable stream.

@@ -157,6 +157,9 @@ LrWpanPhy::LrWpanPhy (void)
   m_currentTxPacket = std::make_pair (none_packet, true);
   m_errorModel = 0;
 
+  m_receivedRxPackets.clear();
+  m_receivedEnergy = 0.0;
+
   m_random = CreateObject<UniformRandomVariable> ();
   m_random->SetAttribute ("Min", DoubleValue (0.0));
   m_random->SetAttribute ("Max", DoubleValue (1.0));
@@ -278,7 +281,10 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 {
   NS_LOG_FUNCTION (this << spectrumRxParams);
   LrWpanSpectrumValueHelper psdHelper;
-
+  if (m_trxState == PHY_ENERGY_RX && !m_energyRx.IsRunning ())
+    {
+      m_energyRx = Simulator::Schedule (Seconds(2.0), &LrWpanPhy::EndEnergyRx, this);
+    }
   if (!m_edRequest.IsExpired ())
     {
       // Update the average receive power during ED.
@@ -312,7 +318,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
   NS_ASSERT (p != 0);
 
   // Prevent PHY from receiving another packet while switching the transceiver state.
-  if (m_trxState == IEEE_802_15_4_PHY_RX_ON && !m_setTRXState.IsRunning ())
+  if ((m_trxState == IEEE_802_15_4_PHY_RX_ON || m_trxState == PHY_ENERGY_RX) && !m_setTRXState.IsRunning ())
     {
       // The specification doesn't seem to refer to BUSY_RX, but vendor
       // data sheets suggest that this is a substate of the RX_ON state
@@ -330,22 +336,30 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 
       // Add any incoming packet to the current interference before checking the
       // SINR.
-      NS_LOG_DEBUG (this << " receiving packet with power: " << 10 * log10(LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel)) + 30 << "dBm");
+      double receivedPower = 10 * log10(LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel)) + 30;
+      NS_LOG_DEBUG (this << " receiving packet with power: " << receivedPower << "dBm");
       m_signal->AddSignal (lrWpanRxParams->psd);
       Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd ();
       *interferenceAndNoise -= *lrWpanRxParams->psd;
       *interferenceAndNoise += *m_noise;
       double sinr = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel) / LrWpanSpectrumValueHelper::TotalAvgPower (interferenceAndNoise, m_phyPIBAttributes.phyCurrentChannel);
+      NS_LOG_DEBUG (this << " sinr: " << receivedPower << "dB");
 
+      if(!m_energyRx.IsExpired ())
+        {
+          m_receivedEnergy += receivedPower;
+        }
       // Std. 802.15.4-2006, appendix E, Figure E.2
       // At SNR < -5 the BER is less than 10e-1.
       // It's useless to even *try* to decode the packet.
       if (10 * log10 (sinr) > -5)
         {
-          ChangeTrxState (IEEE_802_15_4_PHY_BUSY_RX);
+          if (m_trxState == IEEE_802_15_4_PHY_RX_ON)
+            {
+              ChangeTrxState (IEEE_802_15_4_PHY_BUSY_RX);
+            }
           m_currentRxPacket = std::make_pair (lrWpanRxParams, false);
           m_phyRxBeginTrace (p);
-
           m_rxLastUpdate = Simulator::Now ();
         }
       else
@@ -521,6 +535,17 @@ LrWpanPhy::EndRx (Ptr<SpectrumSignalParameters> par)
 }
 
 void
+LrWpanPhy::EndEnergyRx (void)
+{
+  NS_LOG_FUNCTION (this);
+  if (!m_pdEnergyIndicationCallback.IsNull ())
+    {
+      m_pdEnergyIndicationCallback (m_receivedEnergy);
+      m_receivedEnergy = 0.0;
+    }
+}
+
+void
 LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << psduLength << p);
@@ -538,7 +563,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
   // Prevent PHY from sending a packet while switching the transceiver state.
   if (!m_setTRXState.IsRunning ())
     {
-      if (m_trxState == IEEE_802_15_4_PHY_TX_ON)
+      if (m_trxState == IEEE_802_15_4_PHY_TX_ON || m_trxState == PHY_ENERGY_TX)
         {
           //send down
           NS_ASSERT (m_channel);
@@ -557,7 +582,12 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
           txParams->packetBurst = pb;
           m_channel->StartTx (txParams);
           m_pdDataRequest = Simulator::Schedule (txParams->duration, &LrWpanPhy::EndTx, this);
-          ChangeTrxState (IEEE_802_15_4_PHY_BUSY_TX);
+
+          if (m_trxState == IEEE_802_15_4_PHY_TX_ON)
+            {
+              ChangeTrxState (IEEE_802_15_4_PHY_BUSY_TX);
+            }
+
           m_phyTxBeginTrace (p);
           m_currentTxPacket.first = p;
           m_currentTxPacket.second = false;
@@ -565,7 +595,8 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
         }
       else if ((m_trxState == IEEE_802_15_4_PHY_RX_ON)
                || (m_trxState == IEEE_802_15_4_PHY_TRX_OFF)
-               || (m_trxState == IEEE_802_15_4_PHY_BUSY_TX) )
+               || (m_trxState == IEEE_802_15_4_PHY_BUSY_TX)
+               || (m_trxState == PHY_ENERGY_RX))
         {
           if (!m_pdDataConfirmCallback.IsNull ())
             {
@@ -692,7 +723,7 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
   NS_ABORT_IF ( (state != IEEE_802_15_4_PHY_RX_ON)
                 && (state != IEEE_802_15_4_PHY_TRX_OFF)
                 && (state != IEEE_802_15_4_PHY_FORCE_TRX_OFF)
-                && (state != IEEE_802_15_4_PHY_TX_ON) );
+                && (state != IEEE_802_15_4_PHY_TX_ON) && (state != PHY_ENERGY_TX) && (state != PHY_ENERGY_RX) );
 
   NS_LOG_LOGIC ("Trying to set m_trxState from " << m_trxState << " to " << state);
   // this method always overrides previous state setting attempts
@@ -868,6 +899,28 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
         }
     }
 
+    if (state == PHY_ENERGY_TX)
+      {
+        NS_LOG_DEBUG ("turn on PHY_ENERGY_TX");
+        if (m_trxState != PHY_ENERGY_TX)
+          {
+            ChangeTrxState (PHY_ENERGY_TX);
+            m_plmeSetTRXStateConfirmCallback (PHY_ENERGY_TX);
+          }
+
+        return;
+      }
+
+    if (state == PHY_ENERGY_RX)
+      {
+        NS_LOG_DEBUG ("turn on PHY_ENERGY_RX");
+        if (m_trxState != PHY_ENERGY_RX)
+          {
+            ChangeTrxState (PHY_ENERGY_RX);
+          }
+          return;
+      }
+
   NS_FATAL_ERROR ("Unexpected transition from state " << m_trxState << " to state " << state);
 }
 
@@ -998,6 +1051,13 @@ LrWpanPhy::SetPdDataIndicationCallback (PdDataIndicationCallback c)
 {
   NS_LOG_FUNCTION (this);
   m_pdDataIndicationCallback = c;
+}
+
+void
+LrWpanPhy::SetPdEnergyIndicationCallback (PdEnergyIndicationCallback c)
+{
+  NS_LOG_FUNCTION (this);
+  m_pdEnergyIndicationCallback = c;
 }
 
 void
@@ -1201,7 +1261,7 @@ LrWpanPhy::EndTx (void)
 {
   NS_LOG_FUNCTION (this);
 
-  NS_ABORT_IF ( (m_trxState != IEEE_802_15_4_PHY_BUSY_TX) && (m_trxState != IEEE_802_15_4_PHY_TRX_OFF));
+  NS_ABORT_IF ( (m_trxState != IEEE_802_15_4_PHY_BUSY_TX) && (m_trxState != IEEE_802_15_4_PHY_TRX_OFF) && (m_trxState != PHY_ENERGY_TX));
 
   if (m_currentTxPacket.second == false)
     {

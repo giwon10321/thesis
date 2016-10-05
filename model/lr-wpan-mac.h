@@ -361,6 +361,8 @@ public:
    */
   void PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi);
 
+  void PdEnergyIndication (double energy);
+
   /**
    *  IEEE 802.15.4-2006 section 6.2.1.2
    *  Confirm the end of transmission of an MPDU to MAC
