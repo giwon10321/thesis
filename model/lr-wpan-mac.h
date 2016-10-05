@@ -141,6 +141,12 @@ typedef enum
 } LrWpanMcpsDataConfirmStatus;
 
 
+typedef enum
+{
+  MAC_FOR_SENSOR = 0,
+  MAC_FOR_EDT = 1
+} LrWpanMacDeviceType;
+
 /**
  * \ingroup lr-wpan
  *
@@ -581,6 +587,11 @@ public:
 
   void SendCfeAfterRfe (void);
 
+  void SetDeviceType (LrWpanMacDeviceType type);
+
+  bool IsSensor (void);
+
+  bool IsEdt (void);
 protected:
   // Inherited from Object.
   virtual void DoInitialize (void);
@@ -859,6 +870,8 @@ private:
   Time m_difsOfData;
 
   Time m_difsOfEnergy;
+
+  uint8_t m_deviceType;
 
 };
 

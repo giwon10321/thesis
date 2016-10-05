@@ -23,6 +23,7 @@ LrWpanEdtNetDevice::LrWpanEdtNetDevice (void)
 	: LrWpanNetDevice ()
 {
 	NS_LOG_FUNCTION (this);
+	GetMac ()->SetDeviceType (MAC_FOR_EDT);
 }
 
 LrWpanEdtNetDevice::~LrWpanEdtNetDevice (void)

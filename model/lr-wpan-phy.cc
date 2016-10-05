@@ -403,8 +403,10 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 
   // Always call EndRx to update the interference.
   // \todo: Do we need to keep track of these events to unschedule them when disposing off the PHY?
-
-  Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
+  if (m_trxState != PHY_ENERGY_RX)
+    {
+      Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
+    }
 }
 
 void

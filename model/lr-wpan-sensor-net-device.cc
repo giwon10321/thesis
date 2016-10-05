@@ -15,11 +15,11 @@ LrWpanSensorNetDevice::GetTypeId(void)
 		.SetGroupName ("LrWpan")
 		.AddConstructor<LrWpanSensorNetDevice> ()
 		.AddAttribute ("ResidualEnergy",
-									"",
-									DoubleValue(3.0),
-									MakeDoubleAccessor (&LrWpanSensorNetDevice::SetResidualEnergy,
-																			&LrWpanSensorNetDevice::GetResidualEnergy),
-									MakeDoubleChecker<double>())
+						"",
+						DoubleValue(3.0),
+						MakeDoubleAccessor (&LrWpanSensorNetDevice::SetResidualEnergy,
+											&LrWpanSensorNetDevice::GetResidualEnergy),
+						MakeDoubleChecker<double>())
 	;
 
 	return tid;
@@ -30,6 +30,7 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 {
 	NS_LOG_FUNCTION (this);
 	m_threshold_voltage = 4.0;
+	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 }
 
 LrWpanSensorNetDevice::~LrWpanSensorNetDevice (void)

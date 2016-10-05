@@ -624,9 +624,12 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 							//RF-MAC Reqeust For Energy Packet
               if (receivedMacHdr.IsRfe () && (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
                 {
-                  m_setMacState.Cancel ();
-                  ChangeMacState (MAC_IDLE);
-                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendCfeAfterRfe, this);
+                  if (IsEdt ())
+                  {
+                    m_setMacState.Cancel ();
+                    ChangeMacState (MAC_IDLE);
+                    m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendCfeAfterRfe, this);
+                  }
                 }
               // \todo: What should we do if we receive a frame while waiting for an ACK?
               //        Especially if this frame has the ACK request bit set, should we reply with an ACK, possibly missing the pending ACK?
@@ -1207,10 +1210,27 @@ LrWpanMac::GetSifsOfEnergy (void) const
 }
 
 Time
-LrWpanMac::GetSifsOfData(void) const
+LrWpanMac::GetSifsOfData (void) const
 {
   return m_sifsOfData;
 }
 
+void
+LrWpanMac::SetDeviceType (LrWpanMacDeviceType type)
+{
+  m_deviceType = type;
+}
+
+bool
+LrWpanMac::IsSensor (void)
+{
+  return (m_deviceType == MAC_FOR_SENSOR);
+}
+
+bool
+LrWpanMac::IsEdt (void)
+{
+  return (m_deviceType == MAC_FOR_EDT);
+}
 
 } // namespace ns3
