@@ -34,6 +34,8 @@
 #include <ns3/random-variable-stream.h>
 #include <ns3/double.h>
 
+#include <ns3/rng-seed-manager.h>
+
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT                                   \
   std::clog << "[address " << m_shortAddress << "] ";
@@ -151,6 +153,9 @@ LrWpanMac::LrWpanMac ()
   m_sifsOfEnergy = MicroSeconds (5);
   m_difsOfData = MicroSeconds (50);
   m_difsOfEnergy = MicroSeconds (25);
+
+  m_receivedEnergyFromFirstSlot = 0.0;
+  m_receivedEnergyFromSecondSlot = 0.0;
 
   Ptr<UniformRandomVariable> uniformVar = CreateObject<UniformRandomVariable> ();
   uniformVar->SetAttribute ("Min", DoubleValue (0.0));
@@ -628,8 +633,13 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   {
                     m_setMacState.Cancel ();
                     ChangeMacState (MAC_IDLE);
-                    // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendCfeAfterRfe, this);
-                    m_setMacState = Simulator::Schedule (MicroSeconds (10.0), &LrWpanMac::SendCfeAfterRfe, this);
+                    Time delay = MicroSeconds (0.0);
+                    if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 )
+                      {
+                        delay = MicroSeconds (10.0); 
+                      }
+
+                    m_setMacState = Simulator::Schedule (delay, &LrWpanMac::SendCfeAfterRfe, this);
                   }
                 }
               // \todo: What should we do if we receive a frame while waiting for an ACK?
@@ -730,6 +740,16 @@ void
 LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
 {
   NS_LOG_FUNCTION (this << energy << "slot " << static_cast<uint32_t> (slotNumber));
+  if(slotNumber == 1)
+    {
+      m_receivedEnergyFromFirstSlot = energy; 
+    }
+
+  if(slotNumber == 2)
+    {
+      m_receivedEnergyFromSecondSlot = energy;
+       
+    }
 }
 
 void

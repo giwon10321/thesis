@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
   Ptr<LrWpanSensorNetDevice> dev0 = CreateObject<LrWpanSensorNetDevice> ();
   Ptr<LrWpanEdtNetDevice> dev1 = CreateObject<LrWpanEdtNetDevice> ();
   Ptr<LrWpanEdtNetDevice> dev2 = CreateObject<LrWpanEdtNetDevice> ();
-  Ptr<LrWpanSensorNetDevice> dev3 = CreateObject<LrWpanSensorNetDevice> ();
+  Ptr<LrWpanEdtNetDevice> dev3 = CreateObject<LrWpanEdtNetDevice> ();
 
   dev0->SetAddress (Mac16Address ("00:01"));
   dev1->SetAddress (Mac16Address ("00:02"));

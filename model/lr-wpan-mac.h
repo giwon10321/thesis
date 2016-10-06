@@ -873,6 +873,9 @@ private:
 
   uint8_t m_deviceType;
 
+  double m_receivedEnergyFromFirstSlot;
+  double m_receivedEnergyFromSecondSlot;
+
 };
 
 
