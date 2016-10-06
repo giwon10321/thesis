@@ -285,8 +285,8 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
     {
       if(!m_energySlotFirst.IsRunning () && !m_energySlotSecond.IsRunning ())
         {
-          m_energySlotFirst = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndEnergyRx, this);
-          m_energySlotSecond = Simulator::Schedule (MicroSeconds(20.0), &LrWpanPhy::EndEnergyRx, this);
+          m_energySlotFirst = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndEnergyRx, this, 1);
+          m_energySlotSecond = Simulator::Schedule (MicroSeconds(20.0), &LrWpanPhy::EndEnergyRx, this, 2);
         }
     }
 
@@ -342,7 +342,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       // Add any incoming packet to the current interference before checking the
       // SINR.
       double watt = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
-      double receivedPower = 10 * log10(watt);
+      double receivedPower = 10 * log10(watt) + 30;
       NS_LOG_DEBUG (this << " receiving packet with power: " << receivedPower << "dBm");
       m_signal->AddSignal (lrWpanRxParams->psd);
       Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd ();
@@ -543,17 +543,14 @@ LrWpanPhy::EndRx (Ptr<SpectrumSignalParameters> par)
 }
 
 void
-LrWpanPhy::EndEnergyRx (void)
+LrWpanPhy::EndEnergyRx (uint8_t slotNumber)
 {
   NS_LOG_FUNCTION (this);
-  if (m_energySlotFirst.IsExpired ())
+  if (!m_pdEnergyIndicationCallback.IsNull ())
     {
-      if (!m_pdEnergyIndicationCallback.IsNull ())
-        {
-          // double wattTodBm = 10 *log10(m_receivedEnergy);
-          m_pdEnergyIndicationCallback (m_receivedEnergy);
-          m_receivedEnergy = 0.0; 
-        }
+      // double wattTodBm = 10 *log10(m_receivedEnergy);
+      m_pdEnergyIndicationCallback (m_receivedEnergy, slotNumber);
+      m_receivedEnergy = 0.0; 
     }
 }
 

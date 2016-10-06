@@ -628,7 +628,8 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   {
                     m_setMacState.Cancel ();
                     ChangeMacState (MAC_IDLE);
-                    m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendCfeAfterRfe, this);
+                    // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendCfeAfterRfe, this);
+                    m_setMacState = Simulator::Schedule (MicroSeconds (10.0), &LrWpanMac::SendCfeAfterRfe, this);
                   }
                 }
               // \todo: What should we do if we receive a frame while waiting for an ACK?
@@ -726,9 +727,9 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 }
 
 void
-LrWpanMac::PdEnergyIndication (double energy)
+LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
 {
-  NS_LOG_FUNCTION (this << energy);
+  NS_LOG_FUNCTION (this << energy << "slot " << static_cast<uint32_t> (slotNumber));
 }
 
 void

@@ -367,7 +367,7 @@ public:
    */
   void PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi);
 
-  void PdEnergyIndication (double energy);
+  void PdEnergyIndication (double energy, uint8_t slotNumber);
 
   /**
    *  IEEE 802.15.4-2006 section 6.2.1.2

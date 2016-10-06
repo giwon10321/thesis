@@ -180,7 +180,7 @@ typedef struct
  */
 typedef Callback< void, uint32_t, Ptr<Packet>, uint8_t > PdDataIndicationCallback;
 
-typedef Callback< void, double > PdEnergyIndicationCallback;
+typedef Callback< void, double, uint8_t > PdEnergyIndicationCallback;
 
 /**
  * \ingroup lr-wpan
@@ -564,7 +564,7 @@ private:
    */
   void EndRx (Ptr<SpectrumSignalParameters> params);
 
-  void EndEnergyRx (void);
+  void EndEnergyRx (uint8_t slotNumber);
 
   /**
    * Cancel an ongoing ED procedure. This is called when the transceiver is
