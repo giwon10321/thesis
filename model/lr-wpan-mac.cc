@@ -1084,7 +1084,7 @@ LrWpanMac::SetLrWpanMacState (LrWpanMacState macState)
   else if (macState == MAC_CFE_PENDING)
     {
       ChangeMacState (MAC_CFE_PENDING);
-      m_phy->PlmeSetTRXStateRequest (PHY_ENERGY_RX);
+      m_phy->PlmeSetTRXStateRequest (PHY_CFE_RX);
     }
   else if (macState == MAC_CSMA)
     {

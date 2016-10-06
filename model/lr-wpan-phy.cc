@@ -281,10 +281,15 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 {
   NS_LOG_FUNCTION (this << spectrumRxParams);
   LrWpanSpectrumValueHelper psdHelper;
-  if (m_trxState == PHY_ENERGY_RX && !m_energyRx.IsRunning ())
+  if (m_trxState == PHY_CFE_RX)
     {
-      m_energyRx = Simulator::Schedule (Seconds(2.0), &LrWpanPhy::EndEnergyRx, this);
+      if(!m_energySlotFirst.IsRunning () && !m_energySlotSecond.IsRunning ())
+        {
+          m_energySlotFirst = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndEnergyRx, this);
+          m_energySlotSecond = Simulator::Schedule (MicroSeconds(20.0), &LrWpanPhy::EndEnergyRx, this);
+        }
     }
+
   if (!m_edRequest.IsExpired ())
     {
       // Update the average receive power during ED.
@@ -318,7 +323,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
   NS_ASSERT (p != 0);
 
   // Prevent PHY from receiving another packet while switching the transceiver state.
-  if ((m_trxState == IEEE_802_15_4_PHY_RX_ON || m_trxState == PHY_ENERGY_RX) && !m_setTRXState.IsRunning ())
+  if ((m_trxState == IEEE_802_15_4_PHY_RX_ON || m_trxState == PHY_ENERGY_RX || m_trxState == PHY_CFE_RX) && !m_setTRXState.IsRunning ())
     {
       // The specification doesn't seem to refer to BUSY_RX, but vendor
       // data sheets suggest that this is a substate of the RX_ON state
@@ -336,18 +341,19 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 
       // Add any incoming packet to the current interference before checking the
       // SINR.
-      double receivedPower = 10 * log10(LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel)) + 30;
+      double watt = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
+      double receivedPower = 10 * log10(watt);
       NS_LOG_DEBUG (this << " receiving packet with power: " << receivedPower << "dBm");
       m_signal->AddSignal (lrWpanRxParams->psd);
       Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd ();
       *interferenceAndNoise -= *lrWpanRxParams->psd;
       *interferenceAndNoise += *m_noise;
       double sinr = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel) / LrWpanSpectrumValueHelper::TotalAvgPower (interferenceAndNoise, m_phyPIBAttributes.phyCurrentChannel);
-      NS_LOG_DEBUG (this << " sinr: " << receivedPower << "dB");
+      NS_LOG_DEBUG (this << " sinr: " << sinr << "dB");
 
-      if(!m_energyRx.IsExpired ())
+      if(m_energySlotFirst.IsRunning ())
         {
-          m_receivedEnergy += receivedPower;
+          m_receivedEnergy += watt;
         }
       // Std. 802.15.4-2006, appendix E, Figure E.2
       // At SNR < -5 the BER is less than 10e-1.
@@ -403,7 +409,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 
   // Always call EndRx to update the interference.
   // \todo: Do we need to keep track of these events to unschedule them when disposing off the PHY?
-  if (m_trxState != PHY_ENERGY_RX)
+  if (!(m_trxState == PHY_ENERGY_RX || m_trxState == PHY_CFE_RX))
     {
       Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
     }
@@ -540,10 +546,14 @@ void
 LrWpanPhy::EndEnergyRx (void)
 {
   NS_LOG_FUNCTION (this);
-  if (!m_pdEnergyIndicationCallback.IsNull ())
+  if (m_energySlotFirst.IsExpired ())
     {
-      m_pdEnergyIndicationCallback (m_receivedEnergy);
-      m_receivedEnergy = 0.0;
+      if (!m_pdEnergyIndicationCallback.IsNull ())
+        {
+          // double wattTodBm = 10 *log10(m_receivedEnergy);
+          m_pdEnergyIndicationCallback (m_receivedEnergy);
+          m_receivedEnergy = 0.0; 
+        }
     }
 }
 
@@ -565,7 +575,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
   // Prevent PHY from sending a packet while switching the transceiver state.
   if (!m_setTRXState.IsRunning ())
     {
-      if (m_trxState == IEEE_802_15_4_PHY_TX_ON || m_trxState == PHY_ENERGY_TX)
+      if (m_trxState == IEEE_802_15_4_PHY_TX_ON)
         {
           //send down
           NS_ASSERT (m_channel);
@@ -598,7 +608,8 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
       else if ((m_trxState == IEEE_802_15_4_PHY_RX_ON)
                || (m_trxState == IEEE_802_15_4_PHY_TRX_OFF)
                || (m_trxState == IEEE_802_15_4_PHY_BUSY_TX)
-               || (m_trxState == PHY_ENERGY_RX))
+               || (m_trxState == PHY_ENERGY_RX)
+               || (m_trxState == PHY_CFE_RX))
         {
           if (!m_pdDataConfirmCallback.IsNull ())
             {
@@ -725,7 +736,10 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
   NS_ABORT_IF ( (state != IEEE_802_15_4_PHY_RX_ON)
                 && (state != IEEE_802_15_4_PHY_TRX_OFF)
                 && (state != IEEE_802_15_4_PHY_FORCE_TRX_OFF)
-                && (state != IEEE_802_15_4_PHY_TX_ON) && (state != PHY_ENERGY_TX) && (state != PHY_ENERGY_RX) );
+                && (state != IEEE_802_15_4_PHY_TX_ON) 
+                && (state != PHY_ENERGY_TX) 
+                && (state != PHY_ENERGY_RX) 
+                && (state != PHY_CFE_RX) );
 
   NS_LOG_LOGIC ("Trying to set m_trxState from " << m_trxState << " to " << state);
   // this method always overrides previous state setting attempts
@@ -922,6 +936,15 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
           }
           return;
       }
+    if (state == PHY_CFE_RX)
+      {
+        NS_LOG_DEBUG ("turn on PHY_CFE_RX");
+        if (m_trxState != PHY_CFE_RX)
+          {
+            ChangeTrxState (PHY_CFE_RX); 
+          }
+          return;
+      }
 
   NS_FATAL_ERROR ("Unexpected transition from state " << m_trxState << " to state " << state);
 }
@@ -993,6 +1016,7 @@ LrWpanPhy::PlmeSetAttributeRequest (LrWpanPibAttributeIdentifier id,
               }
             m_phyPIBAttributes.phyCurrentChannel = attribute->phyCurrentChannel;
             LrWpanSpectrumValueHelper psdHelper;
+            // SetTxPowerSpectralDensity (psdHelper.CreateTxPowerSpectralDensity (m_phyPIBAttributes.phyTransmitPower, m_phyPIBAttributes.phyCurrentChannel));
             m_txPsd = psdHelper.CreateTxPowerSpectralDensity (m_phyPIBAttributes.phyTransmitPower, m_phyPIBAttributes.phyCurrentChannel);
           }
         break;
@@ -1019,6 +1043,7 @@ LrWpanPhy::PlmeSetAttributeRequest (LrWpanPibAttributeIdentifier id,
           {
             m_phyPIBAttributes.phyTransmitPower = attribute->phyTransmitPower;
             LrWpanSpectrumValueHelper psdHelper;
+            // SetTxPowerSpectralDensity (psdHelper.CreateTxPowerSpectralDensity (m_phyPIBAttributes.phyTransmitPower, m_phyPIBAttributes.phyCurrentChannel));
             m_txPsd = psdHelper.CreateTxPowerSpectralDensity (m_phyPIBAttributes.phyTransmitPower, m_phyPIBAttributes.phyCurrentChannel);
           }
         break;

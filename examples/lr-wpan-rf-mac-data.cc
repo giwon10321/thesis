@@ -91,7 +91,7 @@ int main (int argc, char *argv[])
   Ptr<LrWpanSensorNetDevice> dev0 = CreateObject<LrWpanSensorNetDevice> ();
   Ptr<LrWpanEdtNetDevice> dev1 = CreateObject<LrWpanEdtNetDevice> ();
   Ptr<LrWpanEdtNetDevice> dev2 = CreateObject<LrWpanEdtNetDevice> ();
-  Ptr<LrWpanEdtNetDevice> dev3 = CreateObject<LrWpanEdtNetDevice> ();
+  Ptr<LrWpanSensorNetDevice> dev3 = CreateObject<LrWpanSensorNetDevice> ();
 
   dev0->SetAddress (Mac16Address ("00:01"));
   dev1->SetAddress (Mac16Address ("00:02"));
@@ -128,15 +128,15 @@ int main (int argc, char *argv[])
   dev0->GetPhy ()->SetMobility (sender0Mobility);
   Ptr<ConstantPositionMobilityModel> sender1Mobility = CreateObject<ConstantPositionMobilityModel> ();
   // Configure position 10 m distance
-  sender1Mobility->SetPosition (Vector (0,10,0));
+  sender1Mobility->SetPosition (Vector (0,1.5,0));
   dev1->GetPhy ()->SetMobility (sender1Mobility);
 
   Ptr<ConstantPositionMobilityModel> sender2Mobility = CreateObject<ConstantPositionMobilityModel> ();
-  sender2Mobility->SetPosition (Vector (0,-20,0));
+  sender2Mobility->SetPosition (Vector (0,-2,0));
   dev2->GetPhy ()->SetMobility (sender2Mobility);
 
   Ptr<ConstantPositionMobilityModel> sender3Mobility = CreateObject<ConstantPositionMobilityModel> ();
-  sender3Mobility->SetPosition (Vector (10,10,0));
+  sender3Mobility->SetPosition (Vector (10,5,0));
   dev3->GetPhy ()->SetMobility (sender3Mobility);
 
   McpsDataConfirmCallback cb0;
