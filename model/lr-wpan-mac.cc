@@ -748,7 +748,9 @@ LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
   if(slotNumber == 2)
     {
       m_receivedEnergyFromSecondSlot = energy;
-       
+      m_setMacState.Cancel ();
+      ChangeMacState (MAC_IDLE);
+      m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAckAfterCfe, this);
     }
 }
 
@@ -782,9 +784,37 @@ LrWpanMac::SendAck (uint8_t seqno)
 }
 
 void
-LrWpanMac::SendAckWithOptimization (uint8_t seqno, Ptr<Packet> p)
+LrWpanMac::SendAckAfterCfe (void)
 {
-  
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
+
+  // Generate a corresponding ACK Frame.
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_CFE_ACK, 0);
+  LrWpanMacTrailer macTrailer;
+  Ptr<Packet> ackPacket = Create<Packet> (0);
+  ackPacket->AddHeader (macHdr);
+  // Calculate FCS if the global attribute ChecksumEnable is set.
+  if (Node::ChecksumEnabled ())
+    {
+      macTrailer.EnableFcs (true);
+      macTrailer.SetFcs (ackPacket);
+    }
+  ackPacket->AddTrailer (macTrailer);
+
+  // Enqueue the ACK packet for further processing
+  // when the transmitter is activated.
+  m_txPkt = ackPacket;
+
+  // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
+  ChangeMacState (MAC_SENDING);
+  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
+}
+
+void
+LrWpanMac::SendEnergyPulse (void)
+{
+
 }
 
 void
@@ -834,12 +864,6 @@ LrWpanMac::SendCfeAfterRfe (void)
   // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
   ChangeMacState (MAC_SENDING);
   m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
-}
-
-void
-LrWpanMac::SendEnergyPulse (void)
-{
-
 }
 
 void
@@ -1019,7 +1043,6 @@ void
 LrWpanMac::PlmeEdConfirm (LrWpanPhyEnumeration status, uint8_t energyLevel)
 {
   NS_LOG_FUNCTION (this << status << energyLevel);
-
 }
 
 void
@@ -1253,5 +1276,87 @@ LrWpanMac::IsEdt (void)
 {
   return (m_deviceType == MAC_FOR_EDT);
 }
+
+//RfMacTag
+
+RfMacTag::RfMacTag ()
+{
+}
+
+void
+RfMacTag::SetFirstGroupFrequency (double frequency)
+{
+  m_firstGroupFrequency = frequency;
+}
+
+void
+RfMacTag::SetSecondGroupFrequency (double frequency)
+{
+  m_secondGroupFrequency = frequency;
+}
+
+void
+RfMacTag::SetChargingTime (Time time)
+{
+  m_chargingTime = time;
+}
+
+double
+RfMacTag::GetFirstGroupFrequency (void) const
+{
+  return m_firstGroupFrequency;
+}
+
+double
+RfMacTag::GetSecondGroupFrequency (void) const
+{
+  return m_secondGroupFrequency;
+}
+
+Time
+RfMacTag::GetChargingTime (void) const
+{
+  return m_chargingTime;
+}
+
+TypeId
+RfMacTag::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::RfMacTag")
+    .SetParent<Tag> ()
+    .AddConstructor<RfMacTag> ()
+    .SetGroupName("LrWpan")
+
+  ;
+  return tid;
+}
+
+  // inherited function, no need to doc.
+TypeId
+RfMacTag::GetInstanceTypeId (void) const
+{
+  return GetTypeId ();
+}
+  
+  // inherited function, no need to doc.
+uint32_t
+RfMacTag::GetSerializedSize (void) const
+{
+  return 0;
+}  
+  // inherited function, no need to doc.
+void
+RfMacTag::Serialize (TagBuffer i) const
+{}
+  
+  // inherited function, no need to doc.
+void
+RfMacTag::Deserialize (TagBuffer i)
+{}
+
+  // inherited function, no need to doc.
+void
+RfMacTag::Print (std::ostream &os) const
+{}
 
 } // namespace ns3

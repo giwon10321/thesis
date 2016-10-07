@@ -34,6 +34,8 @@
 #include <ns3/event-id.h>
 #include <deque>
 
+#include <ns3/tag.h>
+
 #include "lr-wpan-mac-header.h"
 
 
@@ -75,7 +77,8 @@ typedef enum
   CHANNEL_ACCESS_FAILURE,//!< CHANNEL_ACCESS_FAILURE
   CHANNEL_IDLE,          //!< CHANNEL_IDLE
   SET_PHY_TX_ON,          //!< SET_PHY_TX_ON
-  MAC_CFE_PENDING
+  MAC_CFE_PENDING,
+  MAC_CFE_ACK_PENDING
 } LrWpanMacState;
 
 namespace TracedValueCallback {
@@ -587,6 +590,10 @@ public:
 
   void SendCfeAfterRfe (void);
 
+  void SendAckAfterCfe (void);
+
+  void SendEnergyPulse (void);
+
   void SetDeviceType (LrWpanMacDeviceType type);
 
   bool IsSensor (void);
@@ -612,11 +619,7 @@ private:
    *
    * \param seqno the sequence number for the ACK
    */
-  void SendAck (uint8_t seqno);
-
-	void SendAckWithOptimization (uint8_t seqno, Ptr<Packet> p);
-
-	void SendEnergyPulse (void);
+  void SendAck (uint8_t seqno);	
 
   /**
    * Remove the tip of the transmission queue, including clean up related to the
@@ -878,6 +881,40 @@ private:
 
 };
 
+class RfMacTag : public Tag
+{
+public:
+  RfMacTag ();
+
+  void SetFirstGroupFrequency (double frequency);
+  void SetSecondGroupFrequency (double frequency);
+  void SetChargingTime (Time time);
+
+  double GetFirstGroupFrequency (void) const;
+  double GetSecondGroupFrequency (void) const;
+  Time GetChargingTime (void) const;
+
+  static TypeId GetTypeId (void);
+
+  // inherited function, no need to doc.
+  virtual TypeId GetInstanceTypeId (void) const;
+  
+  // inherited function, no need to doc.
+  virtual uint32_t GetSerializedSize (void) const;
+  
+  // inherited function, no need to doc.
+  virtual void Serialize (TagBuffer i) const;
+  
+  // inherited function, no need to doc.
+  virtual void Deserialize (TagBuffer i);
+ 
+  // inherited function, no need to doc.
+  virtual void Print (std::ostream &os) const;
+private:
+  double m_firstGroupFrequency;
+  double m_secondGroupFrequency;
+  Time m_chargingTime;
+};
 
 } // namespace ns3
 
