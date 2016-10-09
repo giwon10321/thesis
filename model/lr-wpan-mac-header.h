@@ -270,6 +270,8 @@ public:
 
   bool IsCfe (void) const;
 
+  bool IsCfeAck (void) const;
+
 	bool IsEnergy (void) const;
 
   /**

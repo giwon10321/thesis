@@ -148,6 +148,8 @@ LrWpanHelper::LrWpanPhyEnumerationPrinter (LrWpanPhyEnumeration e)
       return std::string ("ENERGY_RX");
     case PHY_CFE_RX:
       return std::string ("CFE_RX");
+    case PHY_CFE_TX:
+      return std::string ("CFE_TX");
     case IEEE_802_15_4_PHY_UNSPECIFIED:
       return std::string ("UNSPECIFIED");
     default:

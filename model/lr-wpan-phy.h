@@ -116,10 +116,11 @@ typedef enum
   IEEE_802_15_4_PHY_TX_ON = 0x09,
   IEEE_802_15_4_PHY_UNSUPPORTED_ATTRIBUTE = 0xa,
   IEEE_802_15_4_PHY_READ_ONLY = 0xb,
-  PHY_CFE_RX = 0xc,
-  PHY_ENERGY_RX = 0xd,
-  PHY_ENERGY_TX = 0xe,
-  IEEE_802_15_4_PHY_UNSPECIFIED = 0xf // all cases not covered by ieee802.15.4
+  PHY_CFE_TX = 0xc,
+  PHY_CFE_RX = 0xd,
+  PHY_ENERGY_RX = 0xe,
+  PHY_ENERGY_TX = 0xf,
+  IEEE_802_15_4_PHY_UNSPECIFIED = 0x10 // all cases not covered by ieee802.15.4
 } LrWpanPhyEnumeration;
 
 namespace TracedValueCallback
@@ -854,6 +855,8 @@ private:
 
   EventId m_energyRx;
 
+  // EventId m_cfe
+  EventId m_cfeRequest;
   EventId m_energySlotFirst;
   EventId m_energySlotSecond;
 

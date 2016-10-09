@@ -625,6 +625,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 
           if (acceptFrame)
             {
+              NS_LOG_DEBUG ("acceptFrame is true");
               m_macRxTrace (originalPkt);
 							//RF-MAC Reqeust For Energy Packet
               if (receivedMacHdr.IsRfe () && (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
@@ -672,6 +673,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   ChangeMacState (MAC_IDLE);
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAck, this, receivedMacHdr.GetSeqNum ());
                 }
+
               if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull ())
                 {
                   // If it is a data frame, push it up the stack.
@@ -726,6 +728,10 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                 {
                   NS_LOG_DEBUG ("PdDataIndication():  CFE");
                   // m_ackWaitTimeout.Cancel ();
+                }
+              else if (receivedMacHdr.IsCfeAck () && m_lrWpanMacState == MAC_CFE_ACK_PENDING)
+                {
+                  NS_LOG_DEBUG ("PdDataIndication():  CFE ACK");
                 }
             }
           else
@@ -791,6 +797,11 @@ LrWpanMac::SendAckAfterCfe (void)
 
   // Generate a corresponding ACK Frame.
   LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_CFE_ACK, 0);
+  macHdr.SetSrcAddrMode (SHORT_ADDR);
+  macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
+  macHdr.SetDstAddrMode (SHORT_ADDR);
+  macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
+
   LrWpanMacTrailer macTrailer;
   Ptr<Packet> ackPacket = Create<Packet> (0);
   ackPacket->AddHeader (macHdr);
@@ -863,7 +874,7 @@ LrWpanMac::SendCfeAfterRfe (void)
 
   // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
   ChangeMacState (MAC_SENDING);
-  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
+  m_phy->PlmeSetTRXStateRequest (PHY_CFE_TX);
 }
 
 void
@@ -959,11 +970,17 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
               // start retransmission timer
               if (macHdr.IsRfe ())
                 {
-                  Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
-                  NS_ASSERT (m_ackWaitTimeout.IsExpired ());
+                  // Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
+                  // NS_ASSERT (m_ackWaitTimeout.IsExpired ());
                   // m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
                   m_setMacState.Cancel ();
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
+                  return;
+                }
+              else if (macHdr.IsCfe ())
+                {
+                  m_setMacState.Cancel ();
+                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_ACK_PENDING); 
                   return;
                 }
               else
@@ -1058,7 +1075,7 @@ LrWpanMac::PlmeSetTRXStateConfirm (LrWpanPhyEnumeration status)
 {
   NS_LOG_FUNCTION (this << status);
 
-  if (m_lrWpanMacState == MAC_SENDING && (status == IEEE_802_15_4_PHY_TX_ON || status == IEEE_802_15_4_PHY_SUCCESS || PHY_ENERGY_TX))
+  if (m_lrWpanMacState == MAC_SENDING && (status == IEEE_802_15_4_PHY_TX_ON || status == IEEE_802_15_4_PHY_SUCCESS || status == PHY_CFE_TX))
     {
       NS_ASSERT (m_txPkt);
 
@@ -1130,9 +1147,14 @@ LrWpanMac::SetLrWpanMacState (LrWpanMacState macState)
       ChangeMacState (MAC_CFE_PENDING);
       m_phy->PlmeSetTRXStateRequest (PHY_CFE_RX);
     }
+  else if (macState == MAC_CFE_ACK_PENDING)
+    {
+      ChangeMacState (MAC_CFE_ACK_PENDING);
+      m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_RX_ON);  
+    }
   else if (macState == MAC_CSMA)
     {
-      NS_ASSERT (m_lrWpanMacState == MAC_IDLE || m_lrWpanMacState == MAC_ACK_PENDING || m_lrWpanMacState == MAC_CFE_PENDING);
+      NS_ASSERT (m_lrWpanMacState == MAC_IDLE || m_lrWpanMacState == MAC_ACK_PENDING || m_lrWpanMacState == MAC_CFE_PENDING || m_lrWpanMacState == MAC_CFE_ACK_PENDING);
 
       ChangeMacState (MAC_CSMA);
       m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_RX_ON);

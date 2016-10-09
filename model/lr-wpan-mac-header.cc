@@ -90,6 +90,9 @@ LrWpanMacHeader::GetType (void) const
 		case 7:
 			return LRWPAN_MAC_ENERGY_AND_DATA;
 			break;
+    case 8:
+      return LRWPAN_MAC_CFE_ACK;
+      break;
     default:
       return LRWPAN_MAC_RESERVED;
     }
@@ -309,6 +312,11 @@ LrWpanMacHeader::IsCfe (void) const
   return(m_fctrlFrmType == LRWPAN_MAC_CFE);
 }
 
+bool
+LrWpanMacHeader::IsCfeAck (void) const
+{
+  return(m_fctrlFrmType == LRWPAN_MAC_CFE_ACK);
+}
 
 bool
 LrWpanMacHeader::IsEnergy (void) const
