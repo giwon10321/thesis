@@ -819,7 +819,10 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
       CancelEd (state);
 
       NS_LOG_DEBUG ("turn on PHY_TX_ON");
-      if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX) || (m_trxState == IEEE_802_15_4_PHY_RX_ON) || (m_trxState == PHY_CFE_RX))
+      if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
+          || (m_trxState == IEEE_802_15_4_PHY_RX_ON)
+          || (m_trxState == PHY_CFE_RX) 
+          || (m_trxState == PHY_ENERGY_RX))
         {
           if (m_currentRxPacket.first)
             {
@@ -874,7 +877,10 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
       CancelEd (state);
 
       NS_LOG_DEBUG ("turn on PHY_CFE_TX_ON");
-      if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX) || (m_trxState == IEEE_802_15_4_PHY_RX_ON) || (m_trxState == PHY_CFE_RX))
+      if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
+          || (m_trxState == IEEE_802_15_4_PHY_RX_ON)
+          || (m_trxState == PHY_CFE_RX) 
+          || (m_trxState == PHY_ENERGY_RX))
         {
           if (m_currentRxPacket.first)
             {
@@ -919,6 +925,64 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
           if (!m_plmeSetTRXStateConfirmCallback.IsNull ())
             {
               m_plmeSetTRXStateConfirmCallback (PHY_CFE_TX);
+            }
+          return;
+        }      
+    }
+
+  if (state == PHY_ENERGY_TX)
+    {
+      CancelEd (state);
+
+      NS_LOG_DEBUG ("turn on PHY_ENERGY_TX_ON");
+      if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
+          || (m_trxState == IEEE_802_15_4_PHY_RX_ON)
+          || (m_trxState == PHY_CFE_RX) 
+          || (m_trxState == PHY_ENERGY_RX))
+        {
+          if (m_currentRxPacket.first)
+            {
+              //terminate reception if needed
+              //incomplete reception -- force packet discard
+              NS_LOG_DEBUG ("force CFE_TX_ON, terminate reception");
+              m_currentRxPacket.second = true;
+            }
+
+          // If CCA is in progress, cancel CCA and return BUSY.
+          if (!m_ccaRequest.IsExpired ())
+            {
+              m_ccaRequest.Cancel ();
+              if (!m_plmeCcaConfirmCallback.IsNull ())
+                {
+                  m_plmeCcaConfirmCallback (IEEE_802_15_4_PHY_BUSY);
+                }
+            }
+
+          m_trxStatePending = PHY_ENERGY_TX;
+
+          // Delay for turnaround time
+          // TODO: Does it also take aTurnaroundTime to switch the transceiver state,
+          //       even when the receiver is not busy? (6.9.2)
+          Time setTime = Seconds ( (double) aTurnaroundTime / GetDataOrSymbolRate (false));
+          m_setTRXState = Simulator::Schedule (setTime, &LrWpanPhy::EndSetTRXState, this);
+          return;
+        }
+      else if (m_trxState == IEEE_802_15_4_PHY_BUSY_TX || m_trxState == PHY_ENERGY_TX)
+        {
+          // We do NOT change the transceiver state here. We only report that
+          // the transceiver is already in TX_ON state.
+          if (!m_plmeSetTRXStateConfirmCallback.IsNull ())
+            {
+              m_plmeSetTRXStateConfirmCallback (PHY_ENERGY_TX);
+            }
+          return;
+        }
+      else if (m_trxState == IEEE_802_15_4_PHY_TRX_OFF)
+        {
+          ChangeTrxState (PHY_ENERGY_TX);
+          if (!m_plmeSetTRXStateConfirmCallback.IsNull ())
+            {
+              m_plmeSetTRXStateConfirmCallback (PHY_ENERGY_TX);
             }
           return;
         }      
@@ -977,17 +1041,6 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
           return;
         }
     }
-
-    if (state == PHY_ENERGY_TX)
-      {
-        NS_LOG_DEBUG ("turn on PHY_ENERGY_TX");
-        if (m_trxState != PHY_ENERGY_TX)
-          {
-            ChangeTrxState (PHY_ENERGY_TX);
-            m_plmeSetTRXStateConfirmCallback (PHY_ENERGY_TX);
-          }
-        return;
-      }
 
     if (state == PHY_ENERGY_RX)
       {

@@ -864,6 +864,8 @@ private:
    * Uniform random variable stream.
    */
   Ptr<UniformRandomVariable> m_random;
+
+  Ptr<Packet> m_bufferedPacket;
 };
 
 

@@ -639,10 +639,10 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                     m_setMacState.Cancel ();
                     ChangeMacState (MAC_IDLE);
                     Time delay = MicroSeconds (0.0);
-                    NS_LOG_DEBUG ("nano :" <<Simulator::Now ().ToInteger (ns3::Time::NS));
-                    NS_LOG_DEBUG ("micro :" <<Simulator::Now ().GetMicroSeconds ());
+                    m_groupNumber = 1;
                     if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 == 0)
                       {
+                        m_groupNumber = 2;
                         delay = MicroSeconds (10.0); 
                       }
 
@@ -734,7 +734,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                 {
                   RfMacOptChargingTimeTag tag;
                   originalPkt->PeekPacketTag (tag);
-                  NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, chargin time : "<< tag.GetChargingTime ().ToDouble (Time::US));
+                  NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, charging time : "<< tag.GetChargingTime ().ToDouble (Time::US));
                   m_setMacState.Cancel ();
                   ChangeMacState (MAC_IDLE);
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendEnergyPulse, this);
@@ -839,6 +839,32 @@ LrWpanMac::SendAckAfterCfe (void)
 void
 LrWpanMac::SendEnergyPulse (void)
 {
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
+
+  Ptr<Packet> energyPulse = Create<Packet> (0);
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_ENERGY, 0);
+  macHdr.SetSrcAddrMode (SHORT_ADDR);
+  macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
+  macHdr.SetDstAddrMode (SHORT_ADDR);
+  macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
+
+  energyPulse.AddHeader (macHdr);
+
+  LrWpanMacTrailer macTrailer;
+  // Calculate FCS if the global attribute ChecksumEnable is set.
+  if (Node::ChecksumEnabled ())
+    {
+      macTrailer.EnableFcs (true);
+      macTrailer.SetFcs (ackPacket);
+    }
+
+  energyPulse->AddTrailer (macTrailer);
+
+  m_txPkt = energyPulse;
+  ChangeMacState (MAC_SENDING);
+  m_phy->PlmeSetTRXStateRequest (PHY_ENERGY_TX);
+
   if (m_groupNumber == 1)
   {
 
