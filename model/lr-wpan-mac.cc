@@ -730,28 +730,11 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                         }
                     }
                 }
-              else if (receivedMacHdr.IsCfe () && m_txPkt && m_lrWpanMacState == MAC_CFE_PENDING)
-                {
-                  NS_LOG_DEBUG ("PdDataIndication():  CFE");
-                  // m_ackWaitTimeout.Cancel ();
-                }
               else if (receivedMacHdr.IsCfeAck () && m_txPkt &&m_lrWpanMacState == MAC_CFE_ACK_PENDING)
                 {
                   RfMacOptChargingTimeTag tag;
                   originalPkt->PeekPacketTag (tag);
-                  // NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, chargin time : "<< tag.GetChargingTime ().ToDouble (Time::US));
                   NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, chargin time : "<< tag.GetChargingTime ().ToDouble (Time::US));
-                  // m_macTxOkTrace (m_txPkt);
-                  // m_ackWaitTimeout.Cancel ();
-                  // if (!m_mcpsDataConfirmCallback.IsNull ())
-                  //   {
-                  //     TxQueueElement *txQElement = m_txQueue.front ();
-                  //     McpsDataConfirmParams confirmParams;
-                  //     confirmParams.m_msduHandle = txQElement->txQMsduHandle;
-                  //     confirmParams.m_status = IEEE_802_15_4_SUCCESS;
-                  //     m_mcpsDataConfirmCallback (confirmParams);
-                  //   }
-                  // RemoveFirstTxQElement ();
                   m_setMacState.Cancel ();
                   ChangeMacState (MAC_IDLE);
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendEnergyPulse, this);
@@ -856,7 +839,14 @@ LrWpanMac::SendAckAfterCfe (void)
 void
 LrWpanMac::SendEnergyPulse (void)
 {
+  if (m_groupNumber == 1)
+  {
 
+  }
+  else if (m_groupNumber == 2)
+  {
+    
+  }
 }
 
 void

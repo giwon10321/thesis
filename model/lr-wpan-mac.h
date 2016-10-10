@@ -880,6 +880,7 @@ private:
   double m_receivedEnergyFromFirstSlot;
   double m_receivedEnergyFromSecondSlot;
 
+  uint8_t m_groupNumber;
 };
 
 class RfMacOptChargingTimeTag : public Tag
