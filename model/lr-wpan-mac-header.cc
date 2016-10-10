@@ -87,10 +87,7 @@ LrWpanMacHeader::GetType (void) const
 		case 6:
 			return LRWPAN_MAC_ENERGY;
 			break;
-		case 7:
-			return LRWPAN_MAC_ENERGY_AND_DATA;
-			break;
-    case 8:
+    case 7:
       return LRWPAN_MAC_CFE_ACK;
       break;
     default:

@@ -43,6 +43,7 @@ namespace ns3 {
 
 class Packet;
 class LrWpanCsmaCa;
+class RfMacOptChargingTimeTag;
 
 /**
  * \defgroup lr-wpan LR-WPAN models
@@ -881,17 +882,17 @@ private:
 
 };
 
-class RfMacTag : public Tag
+class RfMacOptChargingTimeTag : public Tag
 {
 public:
-  RfMacTag ();
+  RfMacOptChargingTimeTag ();
 
-  void SetFirstGroupFrequency (double frequency);
-  void SetSecondGroupFrequency (double frequency);
+  // void SetFirstGroupFrequency (double frequency);
+  // void SetSecondGroupFrequency (double frequency);
   void SetChargingTime (Time time);
 
-  double GetFirstGroupFrequency (void) const;
-  double GetSecondGroupFrequency (void) const;
+  // double GetFirstGroupFrequency (void) const;
+  // double GetSecondGroupFrequency (void) const;
   Time GetChargingTime (void) const;
 
   static TypeId GetTypeId (void);
@@ -911,9 +912,9 @@ public:
   // inherited function, no need to doc.
   virtual void Print (std::ostream &os) const;
 private:
-  double m_firstGroupFrequency;
-  double m_secondGroupFrequency;
-  Time m_chargingTime;
+  // double m_firstGroupFrequency;
+  // double m_secondGroupFrequency;
+  double m_chargingTime;
 };
 
 } // namespace ns3
