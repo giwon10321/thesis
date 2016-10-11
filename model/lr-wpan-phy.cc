@@ -38,6 +38,8 @@
 #include <ns3/random-variable-stream.h>
 #include <ns3/double.h>
 
+#include "rf-mac-opt-charging-time-tag.h"
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LrWpanPhy");
@@ -577,7 +579,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
   // Prevent PHY from sending a packet while switching the transceiver state.
   if (!m_setTRXState.IsRunning ())
     {
-      if (m_trxState == IEEE_802_15_4_PHY_TX_ON || m_trxState == PHY_CFE_TX)
+      if (m_trxState == IEEE_802_15_4_PHY_TX_ON || m_trxState == PHY_CFE_TX || m_trxState == PHY_ENERGY_TX)
         {
           //send down
           NS_ASSERT (m_channel);
@@ -603,6 +605,13 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
           else if (m_trxState == PHY_CFE_TX)
             {
               m_cfeRequest = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndTx, this); 
+            }
+          else if (m_trxState == PHY_ENERGY_TX)
+            {
+              RfMacOptChargingTimeTag timeTag;
+              p->RemovePacketTag (timeTag);
+
+              m_energyRequest = Simulator::Schedule (timeTag.Get (), &LrWpanPhy::EndTx, this);
             }
 
           ChangeTrxState (IEEE_802_15_4_PHY_BUSY_TX);
@@ -1277,7 +1286,8 @@ void
 LrWpanPhy::CancelEd (LrWpanPhyEnumeration state)
 {
   NS_LOG_FUNCTION (this);
-  NS_ASSERT (state == IEEE_802_15_4_PHY_TRX_OFF || state == IEEE_802_15_4_PHY_TX_ON || state == PHY_CFE_TX);
+
+  NS_ASSERT (state == IEEE_802_15_4_PHY_TRX_OFF || state == IEEE_802_15_4_PHY_TX_ON || state == PHY_CFE_TX || state == PHY_ENERGY_TX);
 
   if (!m_edRequest.IsExpired ())
     {
@@ -1400,7 +1410,7 @@ LrWpanPhy::EndSetTRXState (void)
 {
   NS_LOG_FUNCTION (this);
 
-  NS_ABORT_IF ( (m_trxStatePending != IEEE_802_15_4_PHY_RX_ON) && (m_trxStatePending != IEEE_802_15_4_PHY_TX_ON) && (m_trxStatePending != PHY_CFE_TX));
+  NS_ABORT_IF ( (m_trxStatePending != IEEE_802_15_4_PHY_RX_ON) && (m_trxStatePending != IEEE_802_15_4_PHY_TX_ON) && (m_trxStatePending != PHY_CFE_TX) && (m_trxStatePending != PHY_ENERGY_TX));
   ChangeTrxState (m_trxStatePending);
   m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
 

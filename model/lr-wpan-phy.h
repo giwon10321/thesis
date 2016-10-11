@@ -857,6 +857,8 @@ private:
 
   // EventId m_cfe
   EventId m_cfeRequest;
+  EventId m_energyRequest;
+
   EventId m_energySlotFirst;
   EventId m_energySlotSecond;
 
@@ -864,8 +866,6 @@ private:
    * Uniform random variable stream.
    */
   Ptr<UniformRandomVariable> m_random;
-
-  Ptr<Packet> m_bufferedPacket;
 };
 
 

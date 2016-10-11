@@ -207,7 +207,7 @@ int main (int argc, char *argv[])
   //                                 &LrWpanMac::McpsDataRequest,
   //                                 dev2->GetMac (), params, p0);
 
-  Simulator::ScheduleWithContext (1, Seconds(0.0),
+  Simulator::ScheduleWithContext (1, Seconds(1.0),
                                   &LrWpanMac::SendRfeForEnergy,
                                   dev0->GetMac ());
 

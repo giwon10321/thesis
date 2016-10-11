@@ -37,13 +37,13 @@
 #include <ns3/tag.h>
 
 #include "lr-wpan-mac-header.h"
+#include "rf-mac-opt-charging-time-tag.h"
 
 
 namespace ns3 {
 
 class Packet;
 class LrWpanCsmaCa;
-class RfMacOptChargingTimeTag;
 
 /**
  * \defgroup lr-wpan LR-WPAN models
@@ -881,41 +881,8 @@ private:
   double m_receivedEnergyFromSecondSlot;
 
   uint8_t m_groupNumber;
-};
 
-class RfMacOptChargingTimeTag : public Tag
-{
-public:
-  RfMacOptChargingTimeTag ();
-
-  // void SetFirstGroupFrequency (double frequency);
-  // void SetSecondGroupFrequency (double frequency);
-  void SetChargingTime (Time time);
-
-  // double GetFirstGroupFrequency (void) const;
-  // double GetSecondGroupFrequency (void) const;
-  Time GetChargingTime (void) const;
-
-  static TypeId GetTypeId (void);
-
-  // inherited function, no need to doc.
-  virtual TypeId GetInstanceTypeId (void) const;
-  
-  // inherited function, no need to doc.
-  virtual uint32_t GetSerializedSize (void) const;
-  
-  // inherited function, no need to doc.
-  virtual void Serialize (TagBuffer i) const;
-  
-  // inherited function, no need to doc.
-  virtual void Deserialize (TagBuffer i);
- 
-  // inherited function, no need to doc.
-  virtual void Print (std::ostream &os) const;
-private:
-  // double m_firstGroupFrequency;
-  // double m_secondGroupFrequency;
-  double m_chargingTime;
+  Ptr<Packet> m_bufferedPacket;
 };
 
 } // namespace ns3

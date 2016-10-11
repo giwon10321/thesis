@@ -355,10 +355,10 @@ LrWpanMac::McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataReque
           macHdr.SetAckReq ();
         }
 
-      if (type == LrWpanMacHeader::LRWPAN_MAC_RFE)
-        {
-          macHdr.SetAckReq ();  
-        }
+      // if (type == LrWpanMacHeader::LRWPAN_MAC_RFE)
+      //   {
+      //     macHdr.SetAckReq ();  
+      //   }
     }
   else if (b0 == 0)
     {
@@ -734,7 +734,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                 {
                   RfMacOptChargingTimeTag tag;
                   originalPkt->PeekPacketTag (tag);
-                  NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, charging time : "<< tag.GetChargingTime ().ToDouble (Time::US));
+                  NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, charging time : "<< tag.Get ().ToDouble (Time::US));
                   m_setMacState.Cancel ();
                   ChangeMacState (MAC_IDLE);
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendEnergyPulse, this);
@@ -805,7 +805,7 @@ LrWpanMac::SendAckAfterCfe (void)
 
   //Frequency Optimization and Calculate the charging time.
   RfMacOptChargingTimeTag tag;
-  tag.SetChargingTime (MicroSeconds (100.0));
+  tag.Set (MicroSeconds (100.0));
   ackPacket->AddPacketTag (tag);
 
   // Generate a corresponding ACK Frame.
@@ -849,14 +849,14 @@ LrWpanMac::SendEnergyPulse (void)
   macHdr.SetDstAddrMode (SHORT_ADDR);
   macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
 
-  energyPulse.AddHeader (macHdr);
+  energyPulse->AddHeader (macHdr);
 
   LrWpanMacTrailer macTrailer;
   // Calculate FCS if the global attribute ChecksumEnable is set.
   if (Node::ChecksumEnabled ())
     {
       macTrailer.EnableFcs (true);
-      macTrailer.SetFcs (ackPacket);
+      macTrailer.SetFcs (energyPulse);
     }
 
   energyPulse->AddTrailer (macTrailer);
@@ -878,15 +878,41 @@ LrWpanMac::SendEnergyPulse (void)
 void
 LrWpanMac::SendRfeForEnergy (void)
 {
-	McpsDataRequestParams params;
-  params.m_srcAddrMode = SHORT_ADDR;
-  params.m_dstAddrMode = SHORT_ADDR;
-  params.m_dstPanId = 0;
-  params.m_dstAddr = Mac16Address("ff:ff");
-  params.m_msduHandle = 0;
-  params.m_txOptions = TX_OPTION_ACK;
+  NS_LOG_FUNCTION (this);
+	// McpsDataRequestParams params;
+ //  params.m_srcAddrMode = SHORT_ADDR;
+ //  params.m_dstAddrMode = SHORT_ADDR;
+ //  params.m_dstPanId = 0;
+ //  params.m_dstAddr = Mac16Address("ff:ff");
+ //  params.m_msduHandle = 0;
+ //  params.m_txOptions = TX_OPTION_ACK;
 
-	McpsRfeRequest (params);
+	// McpsRfeRequest (params);
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RFE, 0);
+  macHdr.SetSrcAddrMode (SHORT_ADDR);
+  macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
+  macHdr.SetDstAddrMode (SHORT_ADDR);
+  macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
+  macHdr.SetAckReq ();
+
+  LrWpanMacTrailer macTrailer;
+  Ptr<Packet> ackPacket = Create<Packet> (0);
+  ackPacket->AddHeader (macHdr);
+  // Calculate FCS if the global attribute ChecksumEnable is set.
+  if (Node::ChecksumEnabled ())
+    {
+      macTrailer.EnableFcs (true);
+      macTrailer.SetFcs (ackPacket);
+    }
+  ackPacket->AddTrailer (macTrailer);
+
+  // Enqueue the ACK packet for further processing
+  // when the transmitter is activated.
+  m_txPkt = ackPacket;
+
+  // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
+  ChangeMacState (MAC_SENDING);
+  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
 }
 
 
@@ -1008,7 +1034,7 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
   m_txPkt->PeekHeader (macHdr);
   if (status == IEEE_802_15_4_PHY_SUCCESS)
     {
-      if (!macHdr.IsAcknowledgment ())
+      if (!macHdr.IsAcknowledgment () && !macHdr.IsCfeAck () && !macHdr.IsEnergy ())
         {
           // We have just send a regular data packet, check if we have to wait
           // for an ACK.
@@ -1123,7 +1149,7 @@ LrWpanMac::PlmeSetTRXStateConfirm (LrWpanPhyEnumeration status)
 {
   NS_LOG_FUNCTION (this << status);
 
-  if (m_lrWpanMacState == MAC_SENDING && (status == IEEE_802_15_4_PHY_TX_ON || status == IEEE_802_15_4_PHY_SUCCESS || status == PHY_CFE_TX))
+  if (m_lrWpanMacState == MAC_SENDING && (status == IEEE_802_15_4_PHY_TX_ON || status == IEEE_802_15_4_PHY_SUCCESS || status == PHY_CFE_TX || status == PHY_ENERGY_TX))
     {
       NS_ASSERT (m_txPkt);
 
@@ -1346,66 +1372,5 @@ LrWpanMac::IsEdt (void)
 {
   return (m_deviceType == MAC_FOR_EDT);
 }
-
-//RfMacOptChargingTimeTag
-
-RfMacOptChargingTimeTag::RfMacOptChargingTimeTag ()
-{
-}
-
-void
-RfMacOptChargingTimeTag::SetChargingTime (Time time)
-{
-  m_chargingTime = time.ToDouble (Time::US); 
-}
-
-Time
-RfMacOptChargingTimeTag::GetChargingTime (void) const
-{
-  return MicroSeconds (m_chargingTime);
-}
-
-TypeId
-RfMacOptChargingTimeTag::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::RfMacOptChargingTimeTag")
-    .SetParent<Tag> ()
-    .AddConstructor<RfMacOptChargingTimeTag> ()
-    .SetGroupName("LrWpan")
-  ;
-  return tid;
-}
-
-  // inherited function, no need to doc.
-TypeId
-RfMacOptChargingTimeTag::GetInstanceTypeId (void) const
-{
-  return GetTypeId ();
-}
-  
-  // inherited function, no need to doc.
-uint32_t
-RfMacOptChargingTimeTag::GetSerializedSize (void) const
-{
-  return 8;
-}  
-  // inherited function, no need to doc.
-void
-RfMacOptChargingTimeTag::Serialize (TagBuffer i) const
-{
-  i.WriteDouble (m_chargingTime);
-}
-  
-  // inherited function, no need to doc.
-void
-RfMacOptChargingTimeTag::Deserialize (TagBuffer i)
-{
-  m_chargingTime = i.ReadDouble ();
-}
-
-  // inherited function, no need to doc.
-void
-RfMacOptChargingTimeTag::Print (std::ostream &os) const
-{}
 
 } // namespace ns3
