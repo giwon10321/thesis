@@ -39,6 +39,8 @@
 #include <ns3/double.h>
 
 #include "rf-mac-opt-charging-time-tag.h"
+#include "rf-mac-duration-tag.h"
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LrWpanPhy");
@@ -411,11 +413,15 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
   // Always call EndRx to update the interference.
   // \todo: Do we need to keep track of these events to unschedule them when disposing off the PHY?
   
-  if(m_trxState == PHY_CFE_RX)
-    {
-      // m_cfeRx = Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
-    }
-  else
+  // if(m_trxState == PHY_CFE_RX)
+  //   {
+  //     // m_cfeRx = Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
+  //   }
+  // else
+  //   {
+  //     Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
+  //   }
+  if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
     {
       Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
     }
@@ -584,11 +590,20 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
           NS_ASSERT (m_channel);
 
           // Remove a possible LQI tag from a previous transmission of the packet.
-          LrWpanLqiTag lqiTag;
-          p->RemovePacketTag (lqiTag);
+          // LrWpanLqiTag lqiTag;
+          // p->RemovePacketTag (lqiTag);
+
+          RfMacDurationTag durationTag;
+          p->PeekPacketTag (durationTag);
+          Time duration = durationTag.Get ();
 
           Ptr<LrWpanSpectrumSignalParameters> txParams = Create<LrWpanSpectrumSignalParameters> ();
           txParams->duration = CalculateTxTime (p);
+          if(duration.IsStrictlyPositive ())
+          {
+            txParams->duration = duration;
+          }
+
           txParams->txPhy = GetObject<SpectrumPhy> ();
           txParams->psd = m_txPsd;
           txParams->txAntenna = m_antenna;
@@ -597,21 +612,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
           txParams->packetBurst = pb;
           m_channel->StartTx (txParams);
 
-          if(m_trxState == IEEE_802_15_4_PHY_TX_ON)
-            {
-              m_pdDataRequest = Simulator::Schedule (txParams->duration, &LrWpanPhy::EndTx, this);
-            }
-          else if (m_trxState == PHY_CFE_TX)
-            {
-              m_cfeRequest = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndTx, this); 
-            }
-          else if (m_trxState == PHY_ENERGY_TX)
-            {
-              RfMacOptChargingTimeTag timeTag;
-              p->RemovePacketTag (timeTag);
-
-              m_energyRequest = Simulator::Schedule (timeTag.Get (), &LrWpanPhy::EndTx, this);
-            }
+          m_pdDataRequest = Simulator::Schedule (txParams->duration, &LrWpanPhy::EndTx, this);
 
           ChangeTrxState (IEEE_802_15_4_PHY_BUSY_TX);
 
