@@ -61,6 +61,39 @@ LrWpanMacHeader::~LrWpanMacHeader ()
 }
 
 
+// enum LrWpanMacHeader::LrWpanMacType
+// LrWpanMacHeader::GetType (void) const
+// {
+//   switch (m_fctrlFrmType)
+//     {
+//     case 0:
+//       return LRWPAN_MAC_BEACON;
+//       break;
+//     case 1:
+//       return LRWPAN_MAC_DATA;
+//       break;
+//     case 2:
+//       return LRWPAN_MAC_ACKNOWLEDGMENT;
+//       break;
+//     case 3:
+//       return LRWPAN_MAC_COMMAND;
+//       break;
+// 		case 4:
+// 			return LRWPAN_MAC_RFE;
+// 			break;
+// 		case 5:
+// 			return LRWPAN_MAC_CFE;
+// 			break;
+// 		case 6:
+// 			return LRWPAN_MAC_ENERGY;
+// 			break;
+//     case 7:
+//       return LRWPAN_MAC_CFE_ACK;
+//       break;
+//     default:
+//       return LRWPAN_MAC_RESERVED;
+//     }
+// }
 enum LrWpanMacHeader::LrWpanMacType
 LrWpanMacHeader::GetType (void) const
 {
@@ -78,17 +111,8 @@ LrWpanMacHeader::GetType (void) const
     case 3:
       return LRWPAN_MAC_COMMAND;
       break;
-		case 4:
-			return LRWPAN_MAC_RFE;
-			break;
-		case 5:
-			return LRWPAN_MAC_CFE;
-			break;
-		case 6:
-			return LRWPAN_MAC_ENERGY;
-			break;
-    case 7:
-      return LRWPAN_MAC_CFE_ACK;
+    case 4:
+      return LRWPAN_MAC_RF_MAC;
       break;
     default:
       return LRWPAN_MAC_RESERVED;
@@ -295,31 +319,36 @@ LrWpanMacHeader::IsCommand (void) const
   return(m_fctrlFrmType == LRWPAN_MAC_COMMAND);
 }
 
-
 bool
-LrWpanMacHeader::IsRfe (void) const
+LrWpanMacHeader::IsRfMac (void) const
 {
-	return(m_fctrlFrmType == LRWPAN_MAC_RFE);
+  return(m_fctrlFrmType == LRWPAN_MAC_RF_MAC);
 }
 
+// bool
+// LrWpanMacHeader::IsRfe (void) const
+// {
+// 	return(m_fctrlFrmType == LRWPAN_MAC_RFE);
+// }
 
-bool
-LrWpanMacHeader::IsCfe (void) const
-{
-  return(m_fctrlFrmType == LRWPAN_MAC_CFE);
-}
 
-bool
-LrWpanMacHeader::IsCfeAck (void) const
-{
-  return(m_fctrlFrmType == LRWPAN_MAC_CFE_ACK);
-}
+// bool
+// LrWpanMacHeader::IsCfe (void) const
+// {
+//   return(m_fctrlFrmType == LRWPAN_MAC_CFE);
+// }
 
-bool
-LrWpanMacHeader::IsEnergy (void) const
-{
-	return(m_fctrlFrmType == LRWPAN_MAC_ENERGY);
-} 
+// bool
+// LrWpanMacHeader::IsCfeAck (void) const
+// {
+//   return(m_fctrlFrmType == LRWPAN_MAC_CFE_ACK);
+// }
+
+// bool
+// LrWpanMacHeader::IsEnergy (void) const
+// {
+// 	return(m_fctrlFrmType == LRWPAN_MAC_ENERGY);
+// } 
 
 
 

@@ -36,6 +36,9 @@
 
 #include <ns3/rng-seed-manager.h>
 
+#include "rf-mac-type-tag.h"
+#include "rf-mac-duration-tag.h"
+
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT                                   \
   std::clog << "[address " << m_shortAddress << "] ";
@@ -266,13 +269,6 @@ LrWpanMac::McpsDataRequest (McpsDataRequestParams params, Ptr<Packet> p)
 }
 
 void
-LrWpanMac::McpsRfeRequest (McpsDataRequestParams params)
-{
-  Ptr<Packet> p = Create<Packet> (0);
-	McpsPacketRequest (LrWpanMacHeader::LRWPAN_MAC_RFE, params, p);
-}
-
-void
 LrWpanMac::McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataRequestParams params, Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
@@ -354,11 +350,6 @@ LrWpanMac::McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataReque
         {
           macHdr.SetAckReq ();
         }
-
-      // if (type == LrWpanMacHeader::LRWPAN_MAC_RFE)
-      //   {
-      //     macHdr.SetAckReq ();  
-      //   }
     }
   else if (b0 == 0)
     {
@@ -631,24 +622,51 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
             {
               // NS_LOG_DEBUG ("acceptFrame is true "<<m_lrWpanMacState << " hdr type "<< receivedMacHdr.GetType ());
               m_macRxTrace (originalPkt);
-							//RF-MAC Reqeust For Energy Packet
-              if (receivedMacHdr.IsRfe () && (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
+              if (receivedMacHdr.IsRfMac ())
                 {
+                  NS_LOG_DEBUG ("This packet is rf-mac type");
+                  RfMacTypeTag typeTag;
+                  originalPkt->PeekPacketTag (typeTag);
                   if (IsEdt ())
-                  {
-                    m_setMacState.Cancel ();
-                    ChangeMacState (MAC_IDLE);
-                    Time delay = MicroSeconds (0.0);
-                    m_groupNumber = 1;
-                    if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 == 0)
-                      {
-                        m_groupNumber = 2;
-                        delay = MicroSeconds (10.0); 
-                      }
+                    {
+                      if (typeTag.IsRfe ())
+                        {
+                          m_setMacState.Cancel ();
+                          ChangeMacState (MAC_IDLE);
+                          Time delay = MicroSeconds (0.0);
+                          m_groupNumber = 1;
+                          if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 == 0)
+                            {
+                              m_groupNumber = 2;
+                              delay = MicroSeconds (10.0); 
+                            }
 
-                    m_setMacState = Simulator::Schedule (delay, &LrWpanMac::SendCfeAfterRfe, this);
-                  }
+                          m_setMacState = Simulator::Schedule (delay, &LrWpanMac::SendCfeAfterRfe, this);
+                        }
+                      else if (typeTag.IsCfeAck ())
+                        {
+
+                        }
+                    }
                 }
+							//RF-MAC Reqeust For Energy Packet
+              // if (receivedMacHdr.IsRfe () && (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
+              //   {
+              //     if (IsEdt ())
+              //     {
+              //       m_setMacState.Cancel ();
+              //       ChangeMacState (MAC_IDLE);
+              //       Time delay = MicroSeconds (0.0);
+              //       m_groupNumber = 1;
+              //       if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 == 0)
+              //         {
+              //           m_groupNumber = 2;
+              //           delay = MicroSeconds (10.0); 
+              //         }
+
+              //       m_setMacState = Simulator::Schedule (delay, &LrWpanMac::SendCfeAfterRfe, this);
+              //     }
+              //   }
               // \todo: What should we do if we receive a frame while waiting for an ACK?
               //        Especially if this frame has the ACK request bit set, should we reply with an ACK, possibly missing the pending ACK?
 
@@ -680,17 +698,17 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAck, this, receivedMacHdr.GetSeqNum ());
                 }
 
-              if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull ())
-                {
-                  // If it is a data frame, push it up the stack.
-                  NS_LOG_DEBUG ("PdDataIndication():  Packet is for me; forwarding up");
-                  m_mcpsDataIndicationCallback (params, p);
-                }
-              else if (receivedMacHdr.IsRfe () && !m_mcpsDataIndicationCallback.IsNull ())
-                {
-                  NS_LOG_DEBUG("PdDataIndication():  RFE");
-                  m_mcpsDataIndicationCallback(params, p);
-                }
+              // if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull ())
+              //   {
+              //     // If it is a data frame, push it up the stack.
+              //     NS_LOG_DEBUG ("PdDataIndication():  Packet is for me; forwarding up");
+              //     m_mcpsDataIndicationCallback (params, p);
+              //   }
+              // else if (receivedMacHdr.IsRfe () && !m_mcpsDataIndicationCallback.IsNull ())
+              //   {
+              //     NS_LOG_DEBUG("PdDataIndication():  RFE");
+              //     m_mcpsDataIndicationCallback(params, p);
+              //   }
               else if (receivedMacHdr.IsAcknowledgment () && m_txPkt && m_lrWpanMacState == MAC_ACK_PENDING)
                 {
                   NS_LOG_DEBUG ("PdDataIndication():  ACK");
@@ -730,15 +748,15 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                         }
                     }
                 }
-              else if (receivedMacHdr.IsCfeAck () && m_txPkt &&m_lrWpanMacState == MAC_CFE_ACK_PENDING)
-                {
-                  RfMacOptChargingTimeTag tag;
-                  originalPkt->PeekPacketTag (tag);
-                  NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, charging time : "<< tag.Get ().ToDouble (Time::US));
-                  m_setMacState.Cancel ();
-                  ChangeMacState (MAC_IDLE);
-                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendEnergyPulse, this);
-                }
+              // else if (receivedMacHdr.IsCfeAck () && m_txPkt &&m_lrWpanMacState == MAC_CFE_ACK_PENDING)
+              //   {
+              //     RfMacOptChargingTimeTag tag;
+              //     originalPkt->PeekPacketTag (tag);
+              //     NS_LOG_DEBUG ("PdDataIndication():  CFE ACK, charging time : "<< tag.Get ().ToDouble (Time::US));
+              //     m_setMacState.Cancel ();
+              //     ChangeMacState (MAC_IDLE);
+              //     m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendEnergyPulse, this);
+              //   }
             }
           else
             {
@@ -809,7 +827,7 @@ LrWpanMac::SendAckAfterCfe (void)
   ackPacket->AddPacketTag (tag);
 
   // Generate a corresponding ACK Frame.
-  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_CFE_ACK, 0);
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RF_MAC, 0);
   macHdr.SetSrcAddrMode (SHORT_ADDR);
   macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
   macHdr.SetDstAddrMode (SHORT_ADDR);
@@ -843,7 +861,7 @@ LrWpanMac::SendEnergyPulse (void)
   NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
 
   Ptr<Packet> energyPulse = Create<Packet> (0);
-  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_ENERGY, 0);
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RF_MAC, 0);
   macHdr.SetSrcAddrMode (SHORT_ADDR);
   macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
   macHdr.SetDstAddrMode (SHORT_ADDR);
@@ -879,25 +897,23 @@ void
 LrWpanMac::SendRfeForEnergy (void)
 {
   NS_LOG_FUNCTION (this);
-	// McpsDataRequestParams params;
- //  params.m_srcAddrMode = SHORT_ADDR;
- //  params.m_dstAddrMode = SHORT_ADDR;
- //  params.m_dstPanId = 0;
- //  params.m_dstAddr = Mac16Address("ff:ff");
- //  params.m_msduHandle = 0;
- //  params.m_txOptions = TX_OPTION_ACK;
-
-	// McpsRfeRequest (params);
-  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RFE, 0);
+	
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RF_MAC, 0);
   macHdr.SetSrcAddrMode (SHORT_ADDR);
   macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
   macHdr.SetDstAddrMode (SHORT_ADDR);
   macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
-  macHdr.SetAckReq ();
+  // macHdr.SetAckReq ();
+
+  RfMacTypeTag typeTag;
+  typeTag.Set (RfMacTypeTag::RF_MAC_RFE);
+
+  Ptr<Packet> ackPacket = Create<Packet> (0);
+  ackPacket->AddPacketTag (typeTag);
+
+  ackPacket->AddHeader (macHdr);
 
   LrWpanMacTrailer macTrailer;
-  Ptr<Packet> ackPacket = Create<Packet> (0);
-  ackPacket->AddHeader (macHdr);
   // Calculate FCS if the global attribute ChecksumEnable is set.
   if (Node::ChecksumEnabled ())
     {
@@ -924,16 +940,27 @@ LrWpanMac::SendCfeAfterRfe (void)
   NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
 
   // Generate a corresponding ACK Frame.
-  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_CFE, 0);
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RF_MAC, 0);
   macHdr.SetSrcAddrMode (SHORT_ADDR);
   macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
   macHdr.SetDstAddrMode (SHORT_ADDR);
   macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
-  macHdr.SetAckReq ();
+  
+
+  RfMacTypeTag typeTag;
+  typeTag.Set (RfMacTypeTag::RF_MAC_CFE);
+
+  RfMacDurationTag durationTag;
+  durationTag.Set (MicroSeconds (10));
+
+  Ptr<Packet> ackPacket = Create<Packet> (0);
+
+  ackPacket->AddPacketTag (typeTag);
+  ackPacket->AddPacketTag (durationTag);
+
+  ackPacket->AddHeader (macHdr);
 
   LrWpanMacTrailer macTrailer;
-  Ptr<Packet> ackPacket = Create<Packet> (0);
-  ackPacket->AddHeader (macHdr);
   // Calculate FCS if the global attribute ChecksumEnable is set.
   if (Node::ChecksumEnabled ())
     {
@@ -948,7 +975,7 @@ LrWpanMac::SendCfeAfterRfe (void)
 
   // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
   ChangeMacState (MAC_SENDING);
-  m_phy->PlmeSetTRXStateRequest (PHY_CFE_TX);
+  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
 }
 
 void
@@ -1034,7 +1061,7 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
   m_txPkt->PeekHeader (macHdr);
   if (status == IEEE_802_15_4_PHY_SUCCESS)
     {
-      if (!macHdr.IsAcknowledgment () && !macHdr.IsCfeAck () && !macHdr.IsEnergy ())
+      if (!macHdr.IsAcknowledgment ())
         {
           // We have just send a regular data packet, check if we have to wait
           // for an ACK.
@@ -1042,30 +1069,48 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
             {
               // wait for the ack or the next retransmission timeout
               // start retransmission timer
-              if (macHdr.IsRfe ())
-                {
-                  // Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
-                  // NS_ASSERT (m_ackWaitTimeout.IsExpired ());
-                  // m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
-                  m_setMacState.Cancel ();
-                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
-                  return;
-                }
-              else if (macHdr.IsCfe ())
-                {
-                  m_setMacState.Cancel ();
-                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_ACK_PENDING); 
-                  return;
-                }
-              else
-                {
+              // if (macHdr.IsRfe ())
+              //   {
+              //     // Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
+              //     // NS_ASSERT (m_ackWaitTimeout.IsExpired ());
+              //     // m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
+              //     m_setMacState.Cancel ();
+              //     m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
+              //     return;
+              //   }
+              // else if (macHdr.IsCfe ())
+              //   {
+              //     m_setMacState.Cancel ();
+              //     m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_ACK_PENDING); 
+              //     return;
+              //   }
+              // else
+              //   {
                   Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
                   NS_ASSERT (m_ackWaitTimeout.IsExpired ());
                   m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
                   m_setMacState.Cancel ();
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_ACK_PENDING);
                   return;
+                // }
+            }
+          else if (macHdr.IsRfMac ())
+            {
+              RfMacTypeTag typeTag;
+              m_txPkt->PeekPacketTag (typeTag);
+
+              if (typeTag.IsRfe ())
+                {
+
                 }
+              else if (typeTag.IsCfe ())
+                {
+
+                }
+
+                m_setMacState.Cancel ();
+                m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_IDLE);
+                return;
             }
           else
             {

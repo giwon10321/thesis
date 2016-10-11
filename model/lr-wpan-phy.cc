@@ -363,10 +363,10 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       // It's useless to even *try* to decode the packet.
       if (10 * log10 (sinr) > -5)
         {
-          if (m_trxState == IEEE_802_15_4_PHY_RX_ON)
-            {
+          // if (m_trxState == IEEE_802_15_4_PHY_RX_ON)
+          //   {
               ChangeTrxState (IEEE_802_15_4_PHY_BUSY_RX);
-            }
+            // }
           m_currentRxPacket = std::make_pair (lrWpanRxParams, false);
           m_phyRxBeginTrace (p);
           m_rxLastUpdate = Simulator::Now ();

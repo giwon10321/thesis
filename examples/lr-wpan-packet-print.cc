@@ -28,8 +28,8 @@ int main (int argc, char *argv[])
 {
   Packet::EnablePrinting ();
   Packet::EnableChecking ();
-  //LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_BEACON, 0);        //sequence number set to 0
-  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RFE, 0);
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_BEACON, 0);        //sequence number set to 0
+  // LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RFE, 0);
   macHdr.SetSrcAddrMode (2);                                             // short addr
   macHdr.SetDstAddrMode (0);                                             // no addr
   // ... other setters

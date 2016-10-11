@@ -19,6 +19,7 @@ def build(bld):
         'model/lr-wpan-edt-net-device.cc',
         'model/rf-mac-opt-charging-time-tag.cc',
         'model/rf-mac-duration-tag.cc',
+        'model/rf-mac-type-tag.cc',
         ]
 
     module_test = bld.create_ns3_module_test_library('lr-wpan')
@@ -52,6 +53,7 @@ def build(bld):
         'model/lr-wpan-edt-net-device.h',
         'model/rf-mac-opt-charging-time-tag.h',
         'model/rf-mac-duration-tag.h',
+        'model/rf-mac-type-tag.h',
         ]
 
     if (bld.env['ENABLE_EXAMPLES']):

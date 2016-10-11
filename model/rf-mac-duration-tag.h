@@ -20,8 +20,6 @@ public:
 
   RfMacDurationTag (void);
 
-  RfMacDurationTag (uint8_t lqi);
-
   virtual uint32_t GetSerializedSize (void) const;
   virtual void Serialize (TagBuffer i) const;
   virtual void Deserialize (TagBuffer i);
