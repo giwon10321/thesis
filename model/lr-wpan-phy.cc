@@ -39,7 +39,6 @@
 #include <ns3/double.h>
 
 #include "rf-mac-opt-charging-time-tag.h"
-
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LrWpanPhy");
