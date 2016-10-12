@@ -89,7 +89,7 @@ int main (int argc, char *argv[])
   Ptr<Node> n3 = CreateObject <Node> ();
 
   Ptr<LrWpanSensorNetDevice> dev0 = CreateObject<LrWpanSensorNetDevice> ();
-  Ptr<LrWpanEdtNetDevice> dev1 = CreateObject<LrWpanEdtNetDevice> ();
+  Ptr<LrWpanSensorNetDevice> dev1 = CreateObject<LrWpanSensorNetDevice> ();
   Ptr<LrWpanEdtNetDevice> dev2 = CreateObject<LrWpanEdtNetDevice> ();
   Ptr<LrWpanEdtNetDevice> dev3 = CreateObject<LrWpanEdtNetDevice> ();
 
@@ -187,7 +187,6 @@ int main (int argc, char *argv[])
   params.m_dstAddrMode = SHORT_ADDR;
   params.m_dstPanId = 0;
   params.m_dstAddr = Mac16Address ("00:02");
-  // params.m_dstAddr = Mac16Address::ConvertFrom (dev0->GetBroadcast ());
   params.m_msduHandle = 0;
   params.m_txOptions = TX_OPTION_ACK;
 //  dev0->GetMac ()->McpsDataRequest (params, p0);
@@ -196,24 +195,21 @@ int main (int argc, char *argv[])
   p0->Print (std::cout);
   std::cout << std::endl;
 
-  // Simulator::ScheduleWithContext (1, Seconds (0.0),
+  // Simulator::ScheduleWithContext (1, Seconds (1.0),
   //                                 &LrWpanMac::McpsDataRequest,
   //                                 dev0->GetMac (), params, p0);
 
-  // Send a packet back at time 2 seconds
-  // Ptr<Packet> p2 = Create<Packet> (60);  // 60 bytes of dummy data
-  // params.m_dstAddr = Mac16Address ("00:01");
-  // Simulator::ScheduleWithContext (2, Seconds (0.0),
-  //                                 &LrWpanMac::McpsDataRequest,
-  //                                 dev2->GetMac (), params, p0);
+  // Simulator::ScheduleWithContext (2, Seconds(2.0),
+  //                                 &LrWpanMac::SendRfeForEnergy,
+  //                                 dev0->GetMac ());
 
   Simulator::ScheduleWithContext (1, Seconds(1.0),
                                   &LrWpanMac::SendRfeForEnergy,
                                   dev0->GetMac ());
 
-  // Simulator::ScheduleWithContext (1, Seconds(0.0),
-  //                                 &LrWpanMac::SendRfeForEnergy,
-  //                                 dev2->GetMac ());
+  Simulator::ScheduleWithContext (2, Seconds (2.0),
+                                  &LrWpanMac::McpsDataRequest,
+                                  dev0->GetMac (), params, p0);
 
   Simulator::Run ();
 

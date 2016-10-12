@@ -38,7 +38,7 @@
 #include <ns3/random-variable-stream.h>
 #include <ns3/double.h>
 
-#include "rf-mac-opt-charging-time-tag.h"
+#include "rf-mac-type-tag.h"
 #include "rf-mac-duration-tag.h"
 
 namespace ns3 {
@@ -284,14 +284,14 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 {
   NS_LOG_FUNCTION (this << spectrumRxParams);
   LrWpanSpectrumValueHelper psdHelper;
-  if (m_trxState == PHY_CFE_RX)
-    {
-      if(!m_energySlotFirst.IsRunning () && !m_energySlotSecond.IsRunning ())
-        {
-          m_energySlotFirst = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndEnergyRx, this, 1);
-          m_energySlotSecond = Simulator::Schedule (MicroSeconds(20.0), &LrWpanPhy::EndEnergyRx, this, 2);
-        }
-    }
+  // if (m_trxState == PHY_CFE_RX)
+  //   {
+  //     if(!m_firstEnergySlot.IsRunning () && !m_secondEnergySlot.IsRunning ())
+  //       {
+          // m_firstEnergySlot = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndEnergyRx, this, 1);
+          // m_secondEnergySlot = Simulator::Schedule (MicroSeconds(20.0), &LrWpanPhy::EndEnergyRx, this, 2);
+  //       }
+  //   }
 
   if (!m_edRequest.IsExpired ())
     {
@@ -325,8 +325,30 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
   Ptr<Packet> p = (lrWpanRxParams->packetBurst->GetPackets ()).front ();
   NS_ASSERT (p != 0);
 
+  RfMacTypeTag typeTag;
+  p->PeekPacketTag (typeTag);
+
+  RfMacDurationTag durationTag;
+  p->PeekPacketTag (durationTag);
+
+  if (typeTag.IsCfe ())
+    {
+      if (!m_firstEnergySlot.IsRunning () && !m_secondEnergySlot.IsRunning ())
+        {
+          m_firstEnergySlot = Simulator::Schedule (durationTag.Get (), &LrWpanPhy::EndEnergyRx, this, 1);
+          m_secondEnergySlot = Simulator::Schedule (2 * durationTag.Get (), &LrWpanPhy::EndEnergyRx, this, 2);
+        }
+    }
+  if (typeTag.IsEnergy ())
+    {
+      if (!m_energyRx.IsRunning ())
+        {
+          m_energyRx = Simulator::Schedule (durationTag.Get (), &LrWpanPhy::EndEnergyRx, this, 0); 
+        }
+    }
+
   // Prevent PHY from receiving another packet while switching the transceiver state.
-  if ((m_trxState == IEEE_802_15_4_PHY_RX_ON || m_trxState == PHY_ENERGY_RX || m_trxState == PHY_CFE_RX) && !m_setTRXState.IsRunning ())
+  if ((m_trxState == IEEE_802_15_4_PHY_RX_ON) && !m_setTRXState.IsRunning ())
     {
       // The specification doesn't seem to refer to BUSY_RX, but vendor
       // data sheets suggest that this is a substate of the RX_ON state
@@ -354,7 +376,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       double sinr = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel) / LrWpanSpectrumValueHelper::TotalAvgPower (interferenceAndNoise, m_phyPIBAttributes.phyCurrentChannel);
       NS_LOG_DEBUG (this << " sinr: " << sinr << "dB");
 
-      if(m_energySlotFirst.IsRunning () || m_energySlotSecond.IsRunning ())
+      if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning ())
         {
           m_receivedEnergy += watt;
         }
@@ -365,7 +387,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
         {
           // if (m_trxState == IEEE_802_15_4_PHY_RX_ON)
           //   {
-              ChangeTrxState (IEEE_802_15_4_PHY_BUSY_RX);
+          ChangeTrxState (IEEE_802_15_4_PHY_BUSY_RX);
             // }
           m_currentRxPacket = std::make_pair (lrWpanRxParams, false);
           m_phyRxBeginTrace (p);
@@ -412,16 +434,12 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 
   // Always call EndRx to update the interference.
   // \todo: Do we need to keep track of these events to unschedule them when disposing off the PHY?
-  
-  // if(m_trxState == PHY_CFE_RX)
-  //   {
-  //     // m_cfeRx = Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
-  //   }
-  // else
-  //   {
-  //     Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
-  //   }
-  if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
+
+  if (typeTag.IsCfe () || typeTag.IsEnergy ())
+    {
+      m_cfeRx = Simulator::ScheduleNow (&LrWpanPhy::EndRx, this, spectrumRxParams);
+    }
+  else
     {
       Simulator::Schedule (spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
     }
@@ -510,6 +528,9 @@ LrWpanPhy::EndRx (Ptr<SpectrumSignalParameters> par)
       Ptr<Packet> currentPacket = currentRxParams->packetBurst->GetPackets ().front ();
       NS_ASSERT (currentPacket != 0);
 
+     double watt = LrWpanSpectrumValueHelper::TotalAvgPower (params->psd, m_phyPIBAttributes.phyCurrentChannel);
+     m_receivedEnergy += watt;
+
       // If there is no error model attached to the PHY, we always report the maximum LQI value.
       LrWpanLqiTag tag (std::numeric_limits<uint8_t>::max ());
       currentPacket->PeekPacketTag (tag);
@@ -584,7 +605,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
   // Prevent PHY from sending a packet while switching the transceiver state.
   if (!m_setTRXState.IsRunning ())
     {
-      if (m_trxState == IEEE_802_15_4_PHY_TX_ON || m_trxState == PHY_CFE_TX || m_trxState == PHY_ENERGY_TX)
+      if (m_trxState == IEEE_802_15_4_PHY_TX_ON)
         {
           //send down
           NS_ASSERT (m_channel);
@@ -599,7 +620,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
 
           Ptr<LrWpanSpectrumSignalParameters> txParams = Create<LrWpanSpectrumSignalParameters> ();
           txParams->duration = CalculateTxTime (p);
-          if(duration.IsStrictlyPositive ())
+          if (duration.IsStrictlyPositive ())
           {
             txParams->duration = duration;
           }
@@ -623,9 +644,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
         }
       else if ((m_trxState == IEEE_802_15_4_PHY_RX_ON)
                || (m_trxState == IEEE_802_15_4_PHY_TRX_OFF)
-               || (m_trxState == IEEE_802_15_4_PHY_BUSY_TX)
-               || (m_trxState == PHY_ENERGY_RX)
-               || (m_trxState == PHY_CFE_RX))
+               || (m_trxState == IEEE_802_15_4_PHY_BUSY_TX))
         {
           if (!m_pdDataConfirmCallback.IsNull ())
             {
@@ -752,11 +771,7 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
   NS_ABORT_IF ( (state != IEEE_802_15_4_PHY_RX_ON)
                 && (state != IEEE_802_15_4_PHY_TRX_OFF)
                 && (state != IEEE_802_15_4_PHY_FORCE_TRX_OFF)
-                && (state != IEEE_802_15_4_PHY_TX_ON) 
-                && (state != PHY_ENERGY_TX) 
-                && (state != PHY_ENERGY_RX) 
-                && (state != PHY_CFE_RX)
-                && (state != PHY_CFE_TX) );
+                && (state != IEEE_802_15_4_PHY_TX_ON));
 
   NS_LOG_LOGIC ("Trying to set m_trxState from " << m_trxState << " to " << state);
   // this method always overrides previous state setting attempts
@@ -829,9 +844,7 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
 
       NS_LOG_DEBUG ("turn on PHY_TX_ON");
       if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
-          || (m_trxState == IEEE_802_15_4_PHY_RX_ON)
-          || (m_trxState == PHY_CFE_RX) 
-          || (m_trxState == PHY_ENERGY_RX))
+          || (m_trxState == IEEE_802_15_4_PHY_RX_ON))
         {
           if (m_currentRxPacket.first)
             {
@@ -879,122 +892,6 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
             }
           return;
         }
-    }
-
-  if (state == PHY_CFE_TX)
-    {
-      CancelEd (state);
-
-      NS_LOG_DEBUG ("turn on PHY_CFE_TX_ON");
-      if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
-          || (m_trxState == IEEE_802_15_4_PHY_RX_ON)
-          || (m_trxState == PHY_CFE_RX) 
-          || (m_trxState == PHY_ENERGY_RX))
-        {
-          if (m_currentRxPacket.first)
-            {
-              //terminate reception if needed
-              //incomplete reception -- force packet discard
-              NS_LOG_DEBUG ("force CFE_TX_ON, terminate reception");
-              m_currentRxPacket.second = true;
-            }
-
-          // If CCA is in progress, cancel CCA and return BUSY.
-          if (!m_ccaRequest.IsExpired ())
-            {
-              m_ccaRequest.Cancel ();
-              if (!m_plmeCcaConfirmCallback.IsNull ())
-                {
-                  m_plmeCcaConfirmCallback (IEEE_802_15_4_PHY_BUSY);
-                }
-            }
-
-          m_trxStatePending = PHY_CFE_TX;
-
-          // Delay for turnaround time
-          // TODO: Does it also take aTurnaroundTime to switch the transceiver state,
-          //       even when the receiver is not busy? (6.9.2)
-          Time setTime = Seconds ( (double) aTurnaroundTime / GetDataOrSymbolRate (false));
-          m_setTRXState = Simulator::Schedule (setTime, &LrWpanPhy::EndSetTRXState, this);
-          return;
-        }
-      else if (m_trxState == IEEE_802_15_4_PHY_BUSY_TX || m_trxState == PHY_CFE_TX)
-        {
-          // We do NOT change the transceiver state here. We only report that
-          // the transceiver is already in TX_ON state.
-          if (!m_plmeSetTRXStateConfirmCallback.IsNull ())
-            {
-              m_plmeSetTRXStateConfirmCallback (PHY_CFE_TX);
-            }
-          return;
-        }
-      else if (m_trxState == IEEE_802_15_4_PHY_TRX_OFF)
-        {
-          ChangeTrxState (PHY_CFE_TX);
-          if (!m_plmeSetTRXStateConfirmCallback.IsNull ())
-            {
-              m_plmeSetTRXStateConfirmCallback (PHY_CFE_TX);
-            }
-          return;
-        }      
-    }
-
-  if (state == PHY_ENERGY_TX)
-    {
-      CancelEd (state);
-
-      NS_LOG_DEBUG ("turn on PHY_ENERGY_TX_ON");
-      if ((m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
-          || (m_trxState == IEEE_802_15_4_PHY_RX_ON)
-          || (m_trxState == PHY_CFE_RX) 
-          || (m_trxState == PHY_ENERGY_RX))
-        {
-          if (m_currentRxPacket.first)
-            {
-              //terminate reception if needed
-              //incomplete reception -- force packet discard
-              NS_LOG_DEBUG ("force CFE_TX_ON, terminate reception");
-              m_currentRxPacket.second = true;
-            }
-
-          // If CCA is in progress, cancel CCA and return BUSY.
-          if (!m_ccaRequest.IsExpired ())
-            {
-              m_ccaRequest.Cancel ();
-              if (!m_plmeCcaConfirmCallback.IsNull ())
-                {
-                  m_plmeCcaConfirmCallback (IEEE_802_15_4_PHY_BUSY);
-                }
-            }
-
-          m_trxStatePending = PHY_ENERGY_TX;
-
-          // Delay for turnaround time
-          // TODO: Does it also take aTurnaroundTime to switch the transceiver state,
-          //       even when the receiver is not busy? (6.9.2)
-          Time setTime = Seconds ( (double) aTurnaroundTime / GetDataOrSymbolRate (false));
-          m_setTRXState = Simulator::Schedule (setTime, &LrWpanPhy::EndSetTRXState, this);
-          return;
-        }
-      else if (m_trxState == IEEE_802_15_4_PHY_BUSY_TX || m_trxState == PHY_ENERGY_TX)
-        {
-          // We do NOT change the transceiver state here. We only report that
-          // the transceiver is already in TX_ON state.
-          if (!m_plmeSetTRXStateConfirmCallback.IsNull ())
-            {
-              m_plmeSetTRXStateConfirmCallback (PHY_ENERGY_TX);
-            }
-          return;
-        }
-      else if (m_trxState == IEEE_802_15_4_PHY_TRX_OFF)
-        {
-          ChangeTrxState (PHY_ENERGY_TX);
-          if (!m_plmeSetTRXStateConfirmCallback.IsNull ())
-            {
-              m_plmeSetTRXStateConfirmCallback (PHY_ENERGY_TX);
-            }
-          return;
-        }      
     }
 
   if (state == IEEE_802_15_4_PHY_FORCE_TRX_OFF)
@@ -1050,37 +947,6 @@ LrWpanPhy::PlmeSetTRXStateRequest (LrWpanPhyEnumeration state)
           return;
         }
     }
-
-    if (state == PHY_ENERGY_RX)
-      {
-        NS_LOG_DEBUG ("turn on PHY_ENERGY_RX");
-        if (m_trxState != PHY_ENERGY_RX)
-          {
-            ChangeTrxState (PHY_ENERGY_RX);
-            return;
-          }
-      }
-    if (state == PHY_CFE_RX)
-      {
-        NS_LOG_DEBUG ("turn on PHY_CFE_RX");
-        // if (m_trxState == IEEE_802_15_4_PHY_TX_ON || m_trxState == IEEE_802_15_4_PHY_TRX_OFF)
-        //   {
-        //     // Turnaround delay
-        //     // TODO: Does it really take aTurnaroundTime to switch the transceiver state,
-        //     //       even when the transmitter is not busy? (6.9.1)
-        //     m_trxStatePending = IEEE_802_15_4_PHY_RX_ON;
-
-        //     Time setTime = Seconds ( (double) aTurnaroundTime / GetDataOrSymbolRate (false));
-        //     m_setTRXState = Simulator::Schedule (setTime, &LrWpanPhy::EndSetTRXState, this);
-        //     return;
-        //   }
-        if (m_trxState != PHY_CFE_RX)
-          {
-            ChangeTrxState (PHY_CFE_RX);
-            return;
-          }
-      }
-    // if (state)
 
   NS_FATAL_ERROR ("Unexpected transition from state " << m_trxState << " to state " << state);
 }
@@ -1287,7 +1153,7 @@ LrWpanPhy::CancelEd (LrWpanPhyEnumeration state)
 {
   NS_LOG_FUNCTION (this);
 
-  NS_ASSERT (state == IEEE_802_15_4_PHY_TRX_OFF || state == IEEE_802_15_4_PHY_TX_ON || state == PHY_CFE_TX || state == PHY_ENERGY_TX);
+  NS_ASSERT (state == IEEE_802_15_4_PHY_TRX_OFF || state == IEEE_802_15_4_PHY_TX_ON);
 
   if (!m_edRequest.IsExpired ())
     {
@@ -1410,7 +1276,7 @@ LrWpanPhy::EndSetTRXState (void)
 {
   NS_LOG_FUNCTION (this);
 
-  NS_ABORT_IF ( (m_trxStatePending != IEEE_802_15_4_PHY_RX_ON) && (m_trxStatePending != IEEE_802_15_4_PHY_TX_ON) && (m_trxStatePending != PHY_CFE_TX) && (m_trxStatePending != PHY_ENERGY_TX));
+  NS_ABORT_IF ( (m_trxStatePending != IEEE_802_15_4_PHY_RX_ON) && (m_trxStatePending != IEEE_802_15_4_PHY_TX_ON));
   ChangeTrxState (m_trxStatePending);
   m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
 
@@ -1425,7 +1291,7 @@ LrWpanPhy::EndTx (void)
 {
   NS_LOG_FUNCTION (this);
 
-  NS_ABORT_IF ( (m_trxState != IEEE_802_15_4_PHY_BUSY_TX) && (m_trxState != IEEE_802_15_4_PHY_TRX_OFF) && (m_trxState != PHY_ENERGY_TX));
+  NS_ABORT_IF ( (m_trxState != IEEE_802_15_4_PHY_BUSY_TX) && (m_trxState != IEEE_802_15_4_PHY_TRX_OFF));
 
   if (m_currentTxPacket.second == false)
     {

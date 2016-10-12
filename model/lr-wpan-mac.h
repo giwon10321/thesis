@@ -77,9 +77,10 @@ typedef enum
   MAC_ACK_PENDING,       //!< MAC_ACK_PENDING
   CHANNEL_ACCESS_FAILURE,//!< CHANNEL_ACCESS_FAILURE
   CHANNEL_IDLE,          //!< CHANNEL_IDLE
-  SET_PHY_TX_ON,          //!< SET_PHY_TX_ON
+  SET_PHY_TX_ON,         //!< SET_PHY_TX_ON
   MAC_CFE_PENDING,
-  MAC_CFE_ACK_PENDING
+  MAC_CFE_ACK_PENDING,
+  MAC_ENERGY_PENDING
 } LrWpanMacState;
 
 namespace TracedValueCallback {
