@@ -265,12 +265,6 @@ LrWpanMac::GetExtendedAddress () const
 void
 LrWpanMac::McpsDataRequest (McpsDataRequestParams params, Ptr<Packet> p)
 {
-	McpsPacketRequest (LrWpanMacHeader::LRWPAN_MAC_DATA, params, p);
-}
-
-void
-LrWpanMac::McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataRequestParams params, Ptr<Packet> p)
-{
   NS_LOG_FUNCTION (this << p);
 
   McpsDataConfirmParams confirmParams;
@@ -280,7 +274,7 @@ LrWpanMac::McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataReque
   //       The current tx drop trace is not suitable, because packets dropped using this trace carry the mac header
   //       and footer, while packets being dropped here do not have them.
 
-  LrWpanMacHeader macHdr (type, m_macDsn.GetValue ());
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_DATA, m_macDsn.GetValue ());
   m_macDsn++;
 
   if (p->GetSize () > LrWpanPhy::aMaxPhyPacketSize - aMinMPDUOverhead)
@@ -440,6 +434,7 @@ LrWpanMac::McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataReque
   m_txQueue.push_back (txQElement);
 
   CheckQueue ();
+  // m_rfMacTimer = Simulator::Schedule (GetDifsOfData (), &LrWpanMac::CheckQueue, this);
 }
 
 void

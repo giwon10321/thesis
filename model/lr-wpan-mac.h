@@ -318,9 +318,9 @@ public:
    *  \param p the packet to be transmitted
    */
   void McpsDataRequest (McpsDataRequestParams params, Ptr<Packet> p);
-	void McpsRfeRequest (McpsDataRequestParams params);
-
-	void McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataRequestParams params, Ptr<Packet> p);
+  
+	// void McpsRfeRequest (McpsDataRequestParams params);
+	// void McpsPacketRequest (LrWpanMacHeader::LrWpanMacType type, McpsDataRequestParams params, Ptr<Packet> p);
 
   /**
    * Set the CSMA/CA implementation to be used by the MAC.
@@ -863,6 +863,8 @@ private:
    * Scheduler event for a deferred MAC state change.
    */
   EventId m_setMacState;
+
+  EventId m_rfMacTimer;
 
   Time m_slotTimeOfData;
 
