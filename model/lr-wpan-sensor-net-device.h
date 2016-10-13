@@ -16,11 +16,18 @@ public:
 	void SetResidualEnergy (double energy);
 	double GetResidualEnergy (void) const;
 
+	double m_residualEnergy;
+	double m_thresholdVoltage;
+
+	double m_minVoltage;
+	double m_maxVoltage;
+
 private:
 	void SendRfe (void);
+	void UpdatePower (void);
 
-	double m_residualEnergy;
-	double m_threshold_voltage;
+	TracedValue<double> m_harvestedPower;
+	TracedValue<double> m_totalEnergyHarvestedJ;
 };
 
 }//namespace ns3

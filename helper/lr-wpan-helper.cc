@@ -102,7 +102,7 @@ LrWpanHelper::EnableLogComponents (void)
 {
   LogComponentEnableAll (LOG_PREFIX_TIME);
   LogComponentEnableAll (LOG_PREFIX_FUNC);
-  // LogComponentEnable ("LrWpanCsmaCa", LOG_LEVEL_ALL);
+  LogComponentEnable ("LrWpanCsmaCa", LOG_LEVEL_ALL);
   // LogComponentEnable ("LrWpanErrorModel", LOG_LEVEL_ALL);
   // LogComponentEnable ("LrWpanInterferenceHelper", LOG_LEVEL_ALL);
   LogComponentEnable ("LrWpanMac", LOG_LEVEL_ALL);

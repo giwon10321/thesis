@@ -596,11 +596,16 @@ public:
 
   void SendEnergyPulse (void);
 
+  void SendRfMacPacket (void);
+
   void SetDeviceType (LrWpanMacDeviceType type);
 
   bool IsSensor (void);
 
   bool IsEdt (void);
+  
+  double m_minVoltage;
+  double m_maxVoltage;
 protected:
   // Inherited from Object.
   virtual void DoInitialize (void);

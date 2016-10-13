@@ -14,12 +14,6 @@ LrWpanSensorNetDevice::GetTypeId(void)
 		.SetParent<LrWpanNetDevice> ()
 		.SetGroupName ("LrWpan")
 		.AddConstructor<LrWpanSensorNetDevice> ()
-		.AddAttribute ("ResidualEnergy",
-						"",
-						DoubleValue(3.0),
-						MakeDoubleAccessor (&LrWpanSensorNetDevice::SetResidualEnergy,
-											&LrWpanSensorNetDevice::GetResidualEnergy),
-						MakeDoubleChecker<double>())
 	;
 
 	return tid;
@@ -29,7 +23,9 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	: LrWpanNetDevice ()
 {
 	NS_LOG_FUNCTION (this);
-	m_threshold_voltage = 4.0;
+	m_thresholdVoltage = 2.3;
+	m_minVoltage = 1.8
+	m_maxVoltage = 3.0;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 }
 
@@ -58,6 +54,12 @@ void
 LrWpanSensorNetDevice::SendRfe (void)
 {
 	GetMac()->SendRfeForEnergy ();
+}
+
+void
+LrWpanSensorNetDevice::UpdatePower(void)
+{
+	
 }
 
 }//namespace ns3

@@ -848,7 +848,7 @@ LrWpanMac::SendRfeForEnergy (void)
   ackPacket->AddHeader (macHdr);
 
   LrWpanMacTrailer macTrailer;
-  // Calculate FCS if the global attribute ChecksumEnable is set.
+  
   if (Node::ChecksumEnabled ())
     {
       macTrailer.EnableFcs (true);
@@ -856,13 +856,10 @@ LrWpanMac::SendRfeForEnergy (void)
     }
   ackPacket->AddTrailer (macTrailer);
 
-  // Enqueue the ACK packet for further processing
-  // when the transmitter is activated.
   m_txPkt = ackPacket;
 
-  // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
-  ChangeMacState (MAC_SENDING);
-  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
+  // m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendRfMacPacket, this);
+  SendRfMacPacket ();
 }
 
 
@@ -902,13 +899,9 @@ LrWpanMac::SendCfeAfterRfe (void)
     }
   ackPacket->AddTrailer (macTrailer);
 
-  // Enqueue the ACK packet for further processing
-  // when the transmitter is activated.
   m_txPkt = ackPacket;
 
-  // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
-  ChangeMacState (MAC_SENDING);
-  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
+  SendRfMacPacket ();
 }
 
 void
@@ -948,13 +941,9 @@ LrWpanMac::SendAckAfterCfe (void)
 
   ackPacket->AddTrailer (macTrailer);
 
-  // Enqueue the ACK packet for further processing
-  // when the transmitter is activated.
   m_txPkt = ackPacket;
 
-  // Switch transceiver to TX mode. Proceed sending the Ack on confirm.
-  ChangeMacState (MAC_SENDING);
-  m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
+  SendRfMacPacket ();
 }
 
 void
@@ -993,6 +982,13 @@ LrWpanMac::SendEnergyPulse (void)
   energyPulse->AddTrailer (macTrailer);
 
   m_txPkt = energyPulse;
+
+  SendRfMacPacket ();
+}
+
+void
+LrWpanMac::SendRfMacPacket (void)
+{
   ChangeMacState (MAC_SENDING);
   m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
 }
