@@ -24,7 +24,7 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 {
 	NS_LOG_FUNCTION (this);
 	m_thresholdVoltage = 2.3;
-	m_minVoltage = 1.8
+	m_minVoltage = 1.8;
 	m_maxVoltage = 3.0;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 }
@@ -32,6 +32,13 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 LrWpanSensorNetDevice::~LrWpanSensorNetDevice (void)
 {
 	NS_LOG_FUNCTION (this);
+}
+
+void
+LrWpanSensorNetDevice::DoInitilize (void)
+{
+	NS_LOG_FUNCTION (this);
+	UpdatePower ();
 }
 
 
@@ -59,7 +66,10 @@ LrWpanSensorNetDevice::SendRfe (void)
 void
 LrWpanSensorNetDevice::UpdatePower(void)
 {
-	
+	NS_LOG_FUNCTION (this);
+	 NS_LOG_DEBUG (Simulator::Now ().GetSeconds ()
+                << "s BasicEnergyHarvester(" << GetNode ()->GetId () << "): Updating harvesting power.");
+	m_energyUpdateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::UpdatePower, this);
 }
 
 }//namespace ns3

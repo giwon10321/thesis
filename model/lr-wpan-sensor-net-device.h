@@ -23,11 +23,16 @@ public:
 	double m_maxVoltage;
 
 private:
+	void Doinitialize (void);
+
 	void SendRfe (void);
 	void UpdatePower (void);
 
 	TracedValue<double> m_harvestedPower;
 	TracedValue<double> m_totalEnergyHarvestedJ;
+
+	Time m_updateInterval;
+	EventId m_energyUpdateEvent;
 };
 
 }//namespace ns3

@@ -596,7 +596,7 @@ public:
 
   void SendEnergyPulse (void);
 
-  void SendRfMacPacket (void);
+  void SendNow (void);
 
   void SetDeviceType (LrWpanMacDeviceType type);
 

@@ -433,8 +433,8 @@ LrWpanMac::McpsDataRequest (McpsDataRequestParams params, Ptr<Packet> p)
   txQElement->txQPkt = p;
   m_txQueue.push_back (txQElement);
 
-  CheckQueue ();
-  // m_rfMacTimer = Simulator::Schedule (GetDifsOfData (), &LrWpanMac::CheckQueue, this);
+  // CheckQueue ();
+  m_rfMacTimer = Simulator::Schedule (GetDifsOfData (), &LrWpanMac::CheckQueue, this);
 }
 
 void
@@ -858,8 +858,8 @@ LrWpanMac::SendRfeForEnergy (void)
 
   m_txPkt = ackPacket;
 
-  // m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendRfMacPacket, this);
-  SendRfMacPacket ();
+  m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendNow, this);
+  // SendNow ();
 }
 
 
@@ -901,7 +901,7 @@ LrWpanMac::SendCfeAfterRfe (void)
 
   m_txPkt = ackPacket;
 
-  SendRfMacPacket ();
+  SendNow ();
 }
 
 void
@@ -943,7 +943,7 @@ LrWpanMac::SendAckAfterCfe (void)
 
   m_txPkt = ackPacket;
 
-  SendRfMacPacket ();
+  SendNow ();
 }
 
 void
@@ -983,11 +983,11 @@ LrWpanMac::SendEnergyPulse (void)
 
   m_txPkt = energyPulse;
 
-  SendRfMacPacket ();
+  SendNow ();
 }
 
 void
-LrWpanMac::SendRfMacPacket (void)
+LrWpanMac::SendNow (void)
 {
   ChangeMacState (MAC_SENDING);
   m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
