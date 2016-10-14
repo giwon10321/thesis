@@ -1,5 +1,9 @@
 #include "lr-wpan-sensor-net-device.h"
+
+#include <ns3/simulator.h>
 #include <ns3/log.h>
+#include <ns3/uinteger.h>
+#include <ns3/node.h>
 
 namespace ns3{
 
@@ -35,7 +39,7 @@ LrWpanSensorNetDevice::~LrWpanSensorNetDevice (void)
 }
 
 void
-LrWpanSensorNetDevice::DoInitilize (void)
+LrWpanSensorNetDevice::Doinitialize (void)
 {
 	NS_LOG_FUNCTION (this);
 	UpdatePower ();

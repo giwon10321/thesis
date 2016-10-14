@@ -40,6 +40,7 @@
 
 #include "rf-mac-type-tag.h"
 #include "rf-mac-duration-tag.h"
+#include "rf-mac-group-tag.h"
 
 namespace ns3 {
 
@@ -528,8 +529,8 @@ LrWpanPhy::EndRx (Ptr<SpectrumSignalParameters> par)
       Ptr<Packet> currentPacket = currentRxParams->packetBurst->GetPackets ().front ();
       NS_ASSERT (currentPacket != 0);
 
-     double watt = LrWpanSpectrumValueHelper::TotalAvgPower (params->psd, m_phyPIBAttributes.phyCurrentChannel);
-     m_receivedEnergy += watt;
+      // double watt = LrWpanSpectrumValueHelper::TotalAvgPower (params->psd, m_phyPIBAttributes.phyCurrentChannel);
+      // m_receivedEnergy += watt;
 
       // If there is no error model attached to the PHY, we always report the maximum LQI value.
       LrWpanLqiTag tag (std::numeric_limits<uint8_t>::max ());
@@ -538,6 +539,8 @@ LrWpanPhy::EndRx (Ptr<SpectrumSignalParameters> par)
 
       if (!m_currentRxPacket.second)
         {
+          double distance = params->txPhy->GetMobility ()->GetDistanceFrom (this->GetMobility ());
+          NS_LOG_DEBUG ("distance : "<<distance);
           // The packet was successfully received, push it up the stack.
           if (!m_pdDataIndicationCallback.IsNull ())
             {

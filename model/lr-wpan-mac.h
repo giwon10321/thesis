@@ -37,7 +37,6 @@
 #include <ns3/tag.h>
 
 #include "lr-wpan-mac-header.h"
-#include "rf-mac-opt-charging-time-tag.h"
 
 
 namespace ns3 {

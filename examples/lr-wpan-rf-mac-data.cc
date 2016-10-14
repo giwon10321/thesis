@@ -98,12 +98,13 @@ int main (int argc, char *argv[])
   dev2->SetAddress (Mac16Address ("00:03"));
   dev3->SetAddress (Mac16Address ("00:04"));
 
-  // Each device must be attached to the same channel
+
   Ptr<SingleModelSpectrumChannel> channel = CreateObject<SingleModelSpectrumChannel> ();
   Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
   Ptr<ConstantSpeedPropagationDelayModel> delayModel = CreateObject<ConstantSpeedPropagationDelayModel> ();
   channel->AddPropagationLossModel (propModel);
   channel->SetPropagationDelayModel (delayModel);
+  // Each device must be attached to the same channel
 
   dev0->SetChannel (channel);
   dev1->SetChannel (channel);
