@@ -32,8 +32,9 @@
 #include <ns3/propagation-delay-model.h>
 #include <ns3/simulator.h>
 #include <ns3/single-model-spectrum-channel.h>
-#include <ns3/constant-position-mobility-model.h>
 #include <ns3/packet.h>
+
+#include "ns3/mobility-module.h"
 
 #include <iostream>
 
@@ -60,8 +61,8 @@ static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnu
 int main (int argc, char *argv[])
 {
   bool verbose = false;
-  uint8_t nEnergyNode = 1;
-  uint8_t nSensorNode = 1;
+  uint8_t nEnergyNode = 5;
+  uint8_t nSensorNode = 2;
 
   CommandLine cmd;
 
@@ -94,16 +95,54 @@ int main (int argc, char *argv[])
   NodeContainer sensorNodes;
   sensorNodes.Create (nSensorNode);
 
-  for(int i=0; i<nSensorNode; i++)
+  for(int i=0; i<nEnergyNode; ++i)
     {
-      Ptr<LrWpanSensorNetDevice> dev = CreateObject<LrWpanSensorNetDevice> ();
+      Ptr<LrWpanEdtNetDevice> dev = CreateObject<LrWpanEdtNetDevice> ();
       std::string addressString ("00:0"+std::to_string (i));
       dev->SetAddress (Mac16Address (addressString.c_str ()));
       dev->SetChannel (channel);
-      sensorNodes.Get (i)->AddDevice (dev);
-      dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy0"), MakeCallback (&StateChangeNotification));
-      
+      energyNodes.Get (i)->AddDevice (dev);
+      dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i)), MakeCallback (&StateChangeNotification));
     }
+
+  for(int i=0; i<nSensorNode; ++i)
+    {
+      Ptr<LrWpanSensorNetDevice> dev = CreateObject<LrWpanSensorNetDevice> ();
+      std::string addressString ("00:0"+std::to_string (i+nEnergyNode));
+      dev->SetAddress (Mac16Address (addressString.c_str ()));
+      dev->SetChannel (channel);
+      sensorNodes.Get (i+nEnergyNode)->AddDevice (dev);
+      dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i+nEnergyNode)), MakeCallback (&StateChangeNotification));
+    }
+
+  MobilityHelper mobility;
+  mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
+                                "X", StringValue ("100.0"),
+                                "Y", StringValue ("100.0"),
+                                "Rho", StringValue
+                                ("ns3::UniformRandomVariable[Min=0|Max=30]"));
+  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobility.Install (energyNodes);
+  mobility.Install (sensorNodes);
+
+  lrWpanHelper.EnablePcapAll (std::string ("rf-mac-energy-data"), true);
+  AsciiTraceHelper ascii;
+  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream ("rf-mac-energy-data.tr");
+  lrWpanHelper.EnableAsciiAll (stream);
+
+  Ptr<Packet> p0 = Create<Packet> (50);  // 50 bytes of dummy data
+  McpsDataRequestParams params;
+  params.m_srcAddrMode = SHORT_ADDR;
+  params.m_dstAddrMode = SHORT_ADDR;
+  params.m_dstPanId = 0;
+  params.m_dstAddr = Mac16Address (std::string("00:0"+std::to_string (nEnergyNode + nSensorNode - 1)).c_str ());
+  params.m_msduHandle = 0;
+  params.m_txOptions = TX_OPTION_ACK;
+
+  // Ptr<LrWpanSensorNetDevice> dev(dynamic_cast<LrWpanSensorNetDevice*>(sensorNodes.Get (nEnergyNode - 1)->GetDevice (0)->PeekPointer ()));
+  // Simulator::ScheduleWithContext (1, Seconds(1.0),
+  //                               &LrWpanMac::SendRfeForEnergy,
+  //                                dev->GetMac ());
 
   Simulator::Run ();
 
