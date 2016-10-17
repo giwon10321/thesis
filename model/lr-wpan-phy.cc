@@ -377,7 +377,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       double sinr = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel) / LrWpanSpectrumValueHelper::TotalAvgPower (interferenceAndNoise, m_phyPIBAttributes.phyCurrentChannel);
       NS_LOG_DEBUG (this << " sinr: " << sinr << "dB");
 
-      if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning ())
+      if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning () || m_energyRx.IsRunning ())
         {
           m_receivedEnergy += watt;
         }

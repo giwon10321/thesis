@@ -121,6 +121,7 @@ LrWpanNetDevice::CompleteConfig (void)
       || m_node == 0
       || m_configComplete)
     {
+      NS_LOG_DEBUG ("done");
       return;
     }
   m_mac->SetPhy (m_phy);
