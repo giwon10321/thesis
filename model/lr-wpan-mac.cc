@@ -630,6 +630,10 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                           m_setMacState.Cancel ();
                           ChangeMacState (MAC_IDLE);
                           Time delay = MicroSeconds (0.0);
+
+                          m_rfeSrcAddress = receivedMacHdr.GetShortSrcAddr ();
+                          m_rfeSrcPanId = receivedMacHdr.GetSrcPanId ();
+
                           m_groupNumber = 1;
                           if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 == 0)
                             {
@@ -662,7 +666,8 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                         }
                       if (typeTag.IsCfe ())
                         {
-
+                          m_cfeDstAddress = receivedMacHdr.GetShortDstAddr ();
+                          m_cfeDstPanId = receivedMacHdr.GetDstPanId ();
                         }
                     }
                 }
@@ -783,9 +788,11 @@ LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
     else if(slotNumber == 2)
       {
         m_receivedEnergyFromSecondSlot = energy;
-        m_setMacState.Cancel ();
-        ChangeMacState (MAC_IDLE);
-        m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAckAfterCfe, this);
+        if (GetShortSrcAddr == m_cfeDstAddress){
+          m_setMacState.Cancel ();
+          ChangeMacState (MAC_IDLE);
+          m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAckAfterCfe, this);
+        }
         return;
       }
   }
@@ -886,7 +893,7 @@ LrWpanMac::SendCfeAfterRfe (void)
   macHdr.SetSrcAddrMode (SHORT_ADDR);
   macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
   macHdr.SetDstAddrMode (SHORT_ADDR);
-  macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
+  macHdr.SetDstAddrFields (m_rfeSrcAddress, m_rfeSrcAddress);
 
   ackPacket->AddHeader (macHdr);
 
@@ -989,6 +996,7 @@ LrWpanMac::SendEnergyPulse (void)
 void
 LrWpanMac::SendNow (void)
 {
+  NS_LOG_FUNCTION (this);
   ChangeMacState (MAC_SENDING);
   m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
 }

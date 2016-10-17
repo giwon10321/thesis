@@ -94,8 +94,8 @@ int main (int argc, char *argv[])
 
   MobilityHelper mobility;
   mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
-                                "X", StringValue ("10.0"),
-                                "Y", StringValue ("10.0"),
+                                "X", StringValue ("5.0"),
+                                "Y", StringValue ("5.0"),
                                 "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=30]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nodes);
@@ -135,7 +135,7 @@ int main (int argc, char *argv[])
   params.m_txOptions = TX_OPTION_ACK;
 
   Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
   Simulator::ScheduleWithContext (1, Seconds(1.0),
                                 &LrWpanMac::SendRfeForEnergy,
                                  dev->GetMac ());

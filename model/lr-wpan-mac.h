@@ -890,6 +890,12 @@ private:
   uint8_t m_groupNumber;
 
   Ptr<Packet> m_bufferedPacket;
+
+  Mac16Address m_cfeDstAddress;
+  uint16_t m_cfeDstPanId;
+
+  Mac16Address m_rfeSrcAddress;
+  uint16_t m_rfeSrcPanId;
 };
 
 } // namespace ns3
