@@ -865,8 +865,8 @@ LrWpanMac::SendRfeForEnergy (void)
 
   m_txPkt = ackPacket;
 
-  // m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendNow, this);
-  m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
+  m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendNow, this);
+  // m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
 }
 
 
