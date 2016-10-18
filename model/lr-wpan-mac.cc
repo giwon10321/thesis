@@ -788,7 +788,7 @@ LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
     else if(slotNumber == 2)
       {
         m_receivedEnergyFromSecondSlot = energy;
-        if (GetShortSrcAddr == m_cfeDstAddress){
+        if (GetShortAddress () == m_cfeDstAddress){
           m_setMacState.Cancel ();
           ChangeMacState (MAC_IDLE);
           m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAckAfterCfe, this);
@@ -893,7 +893,7 @@ LrWpanMac::SendCfeAfterRfe (void)
   macHdr.SetSrcAddrMode (SHORT_ADDR);
   macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
   macHdr.SetDstAddrMode (SHORT_ADDR);
-  macHdr.SetDstAddrFields (m_rfeSrcAddress, m_rfeSrcAddress);
+  macHdr.SetDstAddrFields (m_rfeSrcPanId, m_rfeSrcAddress);
 
   ackPacket->AddHeader (macHdr);
 
