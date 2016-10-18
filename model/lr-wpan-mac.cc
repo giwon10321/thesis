@@ -865,8 +865,8 @@ LrWpanMac::SendRfeForEnergy (void)
 
   m_txPkt = ackPacket;
 
-  m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendNow, this);
-  // SendNow ();
+  // m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendNow, this);
+  m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
 }
 
 
@@ -997,6 +997,7 @@ void
 LrWpanMac::SendNow (void)
 {
   NS_LOG_FUNCTION (this);
+  // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
   ChangeMacState (MAC_SENDING);
   m_phy->PlmeSetTRXStateRequest (IEEE_802_15_4_PHY_TX_ON);
 }
