@@ -357,8 +357,9 @@ LrWpanCsmaCa::PlmeCcaConfirm (LrWpanPhyEnumeration status)
             }
           else
             {
-              NS_LOG_DEBUG ("Perform another backoff; m_NB = " << static_cast<uint16_t> (m_NB));
-              m_randomBackoffEvent = Simulator::ScheduleNow (&LrWpanCsmaCa::RandomBackoffDelay, this); //Perform another backoff (step 2)
+              NS_LOG_LOGIC ("Notifying MAC of not idle channel");
+              // NS_LOG_DEBUG ("Perform another backoff; m_NB = " << static_cast<uint16_t> (m_NB));
+              // m_randomBackoffEvent = Simulator::ScheduleNow (&LrWpanCsmaCa::RandomBackoffDelay, this); //Perform another backoff (step 2)
             }
         }
     }

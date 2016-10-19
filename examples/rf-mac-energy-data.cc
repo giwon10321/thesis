@@ -94,9 +94,9 @@ int main (int argc, char *argv[])
 
   MobilityHelper mobility;
   mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
-                                "X", StringValue ("5.0"),
-                                "Y", StringValue ("5.0"),
-                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=30]"));
+                                "X", StringValue ("100.0"),
+                                "Y", StringValue ("100.0"),
+                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=5]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nodes);
 

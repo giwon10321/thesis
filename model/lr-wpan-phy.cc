@@ -340,12 +340,29 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
           m_secondEnergySlot = Simulator::Schedule (2 * durationTag.Get (), &LrWpanPhy::EndEnergyRx, this, 2);
         }
     }
-  if (typeTag.IsEnergy ())
+  else if (typeTag.IsEnergy ())
     {
       if (!m_energyRx.IsRunning ())
         {
           m_energyRx = Simulator::Schedule (durationTag.Get (), &LrWpanPhy::EndEnergyRx, this, 0); 
         }
+    }
+  else if (typeTag.IsRfe ())
+    {
+      double distance = lrWpanRxParams->txPhy->GetMobility ()->GetDistanceFrom (this->GetMobility ());
+      double lamda = 0.145;
+      uint32_t quotient = distance / lamda; // lamda is 0.145 in 2.4GHz environment.
+      RfMacGroupTag groupTag;
+      NS_LOG_DEBUG ("distance : "<<distance);
+      if (distance >= quotient * lamda - lamda / 4 && distance <= quotient * lamda + lamda / 4)
+        {
+          groupTag.Set (1);
+        }
+      else
+        {
+          groupTag.Set (2);
+        }
+      p->AddPacketTag (groupTag);
     }
 
   // Prevent PHY from receiving another packet while switching the transceiver state.
@@ -537,10 +554,9 @@ LrWpanPhy::EndRx (Ptr<SpectrumSignalParameters> par)
       currentPacket->PeekPacketTag (tag);
       m_phyRxEndTrace (currentPacket, tag.Get ());
 
+
       if (!m_currentRxPacket.second)
         {
-          double distance = params->txPhy->GetMobility ()->GetDistanceFrom (this->GetMobility ());
-          NS_LOG_DEBUG ("distance : "<<distance);
           // The packet was successfully received, push it up the stack.
           if (!m_pdDataIndicationCallback.IsNull ())
             {

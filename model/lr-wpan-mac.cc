@@ -38,6 +38,7 @@
 
 #include "rf-mac-type-tag.h"
 #include "rf-mac-duration-tag.h"
+#include "rf-mac-group-tag.h"
 
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT                                   \
@@ -629,16 +630,22 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                         {
                           m_setMacState.Cancel ();
                           ChangeMacState (MAC_IDLE);
-                          Time delay = MicroSeconds (0.0);
+                          Time delay;
 
                           m_rfeSrcAddress = receivedMacHdr.GetShortSrcAddr ();
                           m_rfeSrcPanId = receivedMacHdr.GetSrcPanId ();
 
-                          m_groupNumber = 1;
-                          if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 == 0)
+                          RfMacGroupTag groupTag;
+                          originalPkt->PeekPacketTag (groupTag);
+
+                          m_groupNumber = groupTag.Get ();
+                          if (m_groupNumber == 1)
                             {
-                              m_groupNumber = 2;
-                              delay = MicroSeconds (10.0); 
+                              delay = MicroSeconds (0.0);
+                            }
+                          else if (m_groupNumber == 2)
+                            {
+                              delay = MicroSeconds (10.0);
                             }
 
                           m_setMacState = Simulator::Schedule (delay, &LrWpanMac::SendCfeAfterRfe, this);
@@ -671,24 +678,6 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                         }
                     }
                 }
-							//RF-MAC Reqeust For Energy Packet
-              // if (receivedMacHdr.IsRfe () && (receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
-              //   {
-              //     if (IsEdt ())
-              //     {
-              //       m_setMacState.Cancel ();
-              //       ChangeMacState (MAC_IDLE);
-              //       Time delay = MicroSeconds (0.0);
-              //       m_groupNumber = 1;
-              //       if( Simulator::Now ().ToInteger (ns3::Time::NS) %2 == 0)
-              //         {
-              //           m_groupNumber = 2;
-              //           delay = MicroSeconds (10.0); 
-              //         }
-
-              //       m_setMacState = Simulator::Schedule (delay, &LrWpanMac::SendCfeAfterRfe, this);
-              //     }
-              //   }
               // \todo: What should we do if we receive a frame while waiting for an ACK?
               //        Especially if this frame has the ACK request bit set, should we reply with an ACK, possibly missing the pending ACK?
 
@@ -797,7 +786,7 @@ LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
       }
   }
 
-  if (slotNumber == 0)
+  if (slotNumber == 0 && m_lrWpanMacState == MAC_ENERGY_PENDING)
   {
     m_txPkt = 0;
     m_setMacState.Cancel ();
@@ -1123,20 +1112,23 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
               RfMacTypeTag typeTag;
               m_txPkt->PeekPacketTag (typeTag);
 
+              m_setMacState.Cancel ();
+
               if (typeTag.IsRfe ())
                 {
-                  m_setMacState.Cancel ();
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
                 }
               else if (typeTag.IsCfe ())
                 {
-                  m_setMacState.Cancel ();
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_ACK_PENDING);
                 }
               else if (typeTag.IsCfeAck ())
                 {
-                  m_setMacState.Cancel ();
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_ENERGY_PENDING);
+                }
+              else if (typeTag.IsEnergy ())
+                {
+                  // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this)
                 }
 
                 // m_setMacState.Cancel ();
