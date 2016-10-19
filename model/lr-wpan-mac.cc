@@ -912,8 +912,10 @@ LrWpanMac::SendAckAfterCfe (void)
   RfMacTypeTag typeTag;
   typeTag.Set (RfMacTypeTag::RF_MAC_CFE_ACK);
 
+  //need to calculate charging time T
+  Time chargingTime = MicroSeconds (100.0);
   RfMacDurationTag durationTag;
-  durationTag.Set (MicroSeconds (100.0));
+  durationTag.Set (chargingTime);
 
   ackPacket->AddPacketTag (typeTag);
   ackPacket->AddPacketTag (durationTag);

@@ -605,6 +605,9 @@ public:
   
   double m_minVoltage;
   double m_maxVoltage;
+  double m_minThresholdVoltage;
+  double m_maxThresholdVoltage;
+  double m_idx;
 protected:
   // Inherited from Object.
   virtual void DoInitialize (void);

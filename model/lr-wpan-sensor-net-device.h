@@ -17,7 +17,7 @@ public:
 	double GetResidualEnergy (void) const;
 
 	double m_residualEnergy;
-	double m_thresholdVoltage;
+	double m_minThresholdVoltage;
 
 	double m_minVoltage;
 	double m_maxVoltage;

@@ -245,6 +245,7 @@ LrWpanCsmaCa::RandomBackoffDelay ()
   NS_LOG_LOGIC ("backoffperiod "<<backoffPeriod<< " upperbound "<<upperBound);
   if (IsUnSlottedCsmaCa ())
     {
+      //Backoff for data
       NS_LOG_LOGIC ("Unslotted:  requesting CCA after backoff of " << randomBackoff.GetMicroSeconds () << " us");
       m_requestCcaEvent = Simulator::Schedule (randomBackoff, &LrWpanCsmaCa::RequestCCA, this);
     }

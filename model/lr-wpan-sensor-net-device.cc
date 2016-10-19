@@ -27,9 +27,13 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	: LrWpanNetDevice ()
 {
 	NS_LOG_FUNCTION (this);
-	m_thresholdVoltage = 2.3;
+	m_minThresholdVoltage = 2.3;
 	m_minVoltage = 1.8;
 	m_maxVoltage = 3.0;
+
+	GetMac ()->m_minThresholdVoltage = this->m_minThresholdVoltage;
+	GetMac ()->m_minVoltage = this->m_minVoltage;
+	GetMac ()->m_maxVoltage = this->m_maxVoltage;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 }
 
