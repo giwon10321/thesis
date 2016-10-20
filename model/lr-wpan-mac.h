@@ -607,6 +607,8 @@ public:
   double m_maxVoltage;
   double m_minThresholdVoltage;
   double m_maxThresholdVoltage;
+  double m_currentVoltage;
+
   double m_idx;
 protected:
   // Inherited from Object.
@@ -870,19 +872,13 @@ private:
    * Scheduler event for a deferred MAC state change.
    */
   EventId m_setMacState;
-
   EventId m_rfMacTimer;
 
   Time m_slotTimeOfData;
-
   Time m_slotTimeOfEnergy;
-
   Time m_sifsOfData;
-
   Time m_sifsOfEnergy;
-
   Time m_difsOfData;
-
   Time m_difsOfEnergy;
 
   uint8_t m_deviceType;

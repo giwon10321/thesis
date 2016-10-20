@@ -31,9 +31,11 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	m_minVoltage = 1.8;
 	m_maxVoltage = 3.0;
 
-	GetMac ()->m_minThresholdVoltage = this->m_minThresholdVoltage;
-	GetMac ()->m_minVoltage = this->m_minVoltage;
-	GetMac ()->m_maxVoltage = this->m_maxVoltage;
+	GetMac ()->m_minThresholdVoltage = 2.3;
+	GetMac ()->m_minVoltage = 1.8;
+	GetMac ()->m_maxVoltage = 3.0;
+	GetMac ()->m_maxThresholdVoltage = 0;
+   	GetMac ()->m_currentVoltage = 3.0;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 }
 

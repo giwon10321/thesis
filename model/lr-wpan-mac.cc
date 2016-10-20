@@ -777,17 +777,27 @@ LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
     else if(slotNumber == 2)
       {
         m_receivedEnergyFromSecondSlot = energy;
-        if (GetShortAddress () == m_cfeDstAddress){
-          m_setMacState.Cancel ();
-          ChangeMacState (MAC_IDLE);
-          m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAckAfterCfe, this);
-        }
+        if (GetShortAddress () == m_cfeDstAddress)
+          {
+            m_setMacState.Cancel ();
+            ChangeMacState (MAC_IDLE);
+            m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAckAfterCfe, this);
+          }
         return;
       }
   }
 
   if (slotNumber == 0 && m_lrWpanMacState == MAC_ENERGY_PENDING)
   {
+    // check whether this device send the rfe packet or not.
+    if (GetShortAddress () == m_cfeDstAddress)
+      {
+
+      }
+    else
+      {
+
+      }
     m_txPkt = 0;
     m_setMacState.Cancel ();
     m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_IDLE);
