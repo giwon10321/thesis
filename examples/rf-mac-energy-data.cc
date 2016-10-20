@@ -143,7 +143,6 @@ int main (int argc, char *argv[])
                                 &LrWpanMac::McpsDataRequest,
                                 dev2->GetMac(), params, p0);
   Simulator::Run ();
-
   Simulator::Destroy ();
   return 0;
 }

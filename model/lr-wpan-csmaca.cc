@@ -248,9 +248,11 @@ LrWpanCsmaCa::RandomBackoffDelay ()
       //Backoff for data
       // Time rfMacBackoff = m_mac->GetDifsOfData () + (uint64_t)m_random->GetValue (32, 1025) * 
       // (m_mac->m_maxVoltage - m_mac->m_currentVoltage) * (m_mac->GetSlotTimeOfData () - m_mac->GetSlotTimeOfEnergy ()) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage);
-
-      NS_LOG_LOGIC ("Unslotted:  requesting CCA after backoff of " << randomBackoff.GetMicroSeconds () << " us");
-      m_requestCcaEvent = Simulator::Schedule (randomBackoff, &LrWpanCsmaCa::RequestCCA, this);
+      Time rfMacBackoff = MicroSeconds ((uint64_t)m_random->GetValue (32, 1025) * (m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds () + ((m_mac->m_maxVoltage - m_mac->m_currentVoltage) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage)) 
+      * (m_mac->GetSlotTimeOfData ().GetMicroSeconds () - m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds ())));
+      NS_LOG_LOGIC ("Unslotted rf mac backoff: " << rfMacBackoff.GetMicroSeconds () << "us slot_data "<<m_mac->GetSlotTimeOfData ().GetMicroSeconds ());
+      // NS_LOG_LOGIC ("Unslotted:  requesting CCA after backoff of " << randomBackoff.GetMicroSeconds () << " us");
+      m_requestCcaEvent = Simulator::Schedule (rfMacBackoff, &LrWpanCsmaCa::RequestCCA, this);
     }
   else
     {

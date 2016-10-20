@@ -151,8 +151,8 @@ LrWpanMac::LrWpanMac ()
   m_numCsmacaRetry = 0;
   m_txPkt = 0;
 
-  m_slotTimeOfData = MicroSeconds (10);
-  m_slotTimeOfEnergy = MicroSeconds (20);
+  m_slotTimeOfData = MicroSeconds (20);
+  m_slotTimeOfEnergy = MicroSeconds (10);
   m_sifsOfData = MicroSeconds (10);
   m_sifsOfEnergy = MicroSeconds (5);
   m_difsOfData = MicroSeconds (50);
