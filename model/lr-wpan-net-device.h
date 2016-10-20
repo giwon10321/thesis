@@ -161,10 +161,12 @@ public:
    */
   int64_t AssignStreams (int64_t stream);
 
-private:
+protected:
   // Inherited from NetDevice/Object
   virtual void DoDispose (void);
   virtual void DoInitialize (void);
+
+private:
 
   /**
    * Mark NetDevice link as up.

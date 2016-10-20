@@ -23,6 +23,7 @@
 #include <ns3/lr-wpan-csmaca.h>
 #include <ns3/lr-wpan-error-model.h>
 #include <ns3/lr-wpan-net-device.h>
+#include <ns3/lr-wpan-sensor-net-device.h>
 #include <ns3/mobility-model.h>
 #include <ns3/single-model-spectrum-channel.h>
 #include <ns3/multi-model-spectrum-channel.h>
@@ -111,6 +112,8 @@ LrWpanHelper::EnableLogComponents (void)
   LogComponentEnable ("LrWpanSpectrumSignalParameters", LOG_LEVEL_ALL);
   LogComponentEnable ("LrWpanSpectrumValueHelper", LOG_LEVEL_ALL);
   LogComponentEnable ("SingleModelSpectrumChannel", LOG_LEVEL_ALL);
+
+  LogComponentEnable ("LrWpanSensorNetDevice", LOG_LEVEL_ALL);
 }
 
 std::string

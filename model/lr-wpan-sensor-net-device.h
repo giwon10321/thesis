@@ -22,8 +22,10 @@ public:
 	double m_minVoltage;
 	double m_maxVoltage;
 
+protected:
+	virtual void DoInitialize (void);
+	virtual void DoDispose (void);
 private:
-	void Doinitialize (void);
 
 	void SendRfe (void);
 	void UpdatePower (void);
