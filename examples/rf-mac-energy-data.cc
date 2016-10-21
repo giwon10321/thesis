@@ -142,6 +142,7 @@ int main (int argc, char *argv[])
   Simulator::ScheduleWithContext (2, Seconds(1.0),
                                 &LrWpanMac::McpsDataRequest,
                                 dev2->GetMac(), params, p0);
+  Simulator::Stop (Seconds (5.0));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;

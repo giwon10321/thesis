@@ -10,7 +10,10 @@ namespace ns3{
 NS_LOG_COMPONENT_DEFINE ("LrWpanSensorNetDevice");
 
 NS_OBJECT_ENSURE_REGISTERED (LrWpanSensorNetDevice);
-
+/*
+	capacity : 150mAh
+	V : 2.0~3.0
+*/
 TypeId
 LrWpanSensorNetDevice::GetTypeId(void)
 {
@@ -29,7 +32,7 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	NS_LOG_FUNCTION (this);
 	m_updateInterval = Seconds (1.0);
 	m_minThresholdVoltage = 2.3;
-	m_minVoltage = 1.8;
+	m_minVoltage = 2.0;
 	m_maxVoltage = 3.0;
 
 	GetMac ()->m_minThresholdVoltage = 2.3;
@@ -57,7 +60,7 @@ void
 LrWpanSensorNetDevice::DoInitialize (void)
 {
 	NS_LOG_FUNCTION (this);
-	Simulator::ScheduleNow (&LrWpanSensorNetDevice::UpdatePower, this);
+	UpdatePower ();
 	LrWpanNetDevice::DoInitialize ();
 }
 
@@ -86,15 +89,15 @@ LrWpanSensorNetDevice::SendRfe (void)
 void
 LrWpanSensorNetDevice::UpdatePower(void)
 {
- 	NS_LOG_DEBUG (Simulator::Now ().GetSeconds ()<< "s LrWpanSensorNetDevice(" << GetNode ()->GetId () << "): Updating harvesting power.");
-
- 	m_energyUpdateEvent.Cancel ();
+ 	NS_LOG_DEBUG ("Updating harvesting power.");
 
 	if (Simulator::IsFinished ())
 	{
 	  NS_LOG_DEBUG ("Simulation Finished.");
 	  return;
 	}
+	
+	m_energyUpdateEvent.Cancel ();
 	m_energyUpdateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::UpdatePower, this);
 }
 
