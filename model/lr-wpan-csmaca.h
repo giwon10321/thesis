@@ -238,6 +238,9 @@ public:
    */
   uint8_t GetNB (void);
 
+
+  void PerformRfMacBackoffDelay (void);
+
 private:
   // Disable implicit copy constructors
   /**
@@ -333,6 +336,11 @@ private:
    * reporting the channel status to the MAC while canceling the CSMA algorithm.
    */
   bool m_ccaRequestRunning;
+
+  Time m_rfMacBackOffTime;
+  Time m_rfMacTimerLastUpdatedTime;
+
+  EventId m_rfMacBackOffEvent;
 };
 
 }

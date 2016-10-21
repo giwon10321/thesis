@@ -206,8 +206,22 @@ LrWpanCsmaCa::Start ()
     }
   else
     {
-      m_BE = m_macMinBE;
-      m_randomBackoffEvent = Simulator::ScheduleNow (&LrWpanCsmaCa::RandomBackoffDelay, this);
+      // m_BE = m_macMinBE;
+      // m_randomBackoffEvent = Simulator::ScheduleNow (&LrWpanCsmaCa::RandomBackoffDelay, this);
+      RfMacTypeTag typeTag;
+      GetMac ()->m_txPkt->PeekPacketTag (typeTag);
+
+      Time difs;
+      if (typeTag.IsRfe ())
+        {
+          difs = m_mac->GetDifsOfEnergy ();
+        }
+      else if (typeTag.IsData ())
+        {
+          difs = m_mac->GetDifsOfData (); 
+        }
+
+      m_requestCcaEvent = Simulator::Schedule (difs, &LrWpanCsmaCa::RequestCCA, this);
     }
   /*
   *  TODO: If using Backoff.cc (will need to modify Backoff::GetBackoffTime)
@@ -246,29 +260,43 @@ LrWpanCsmaCa::RandomBackoffDelay ()
   symbolRate = (uint64_t) m_mac->GetPhy ()->GetDataOrSymbolRate (isData); //symbols per second
   backoffPeriod = (uint64_t)m_random->GetValue (0, upperBound+1); // num backoff periods
   randomBackoff = MicroSeconds (backoffPeriod * GetUnitBackoffPeriod () * 1000 * 1000 / symbolRate);
-  NS_LOG_LOGIC ("backoffperiod "<<backoffPeriod<< " upperbound "<<upperBound);
+  // NS_LOG_LOGIC ("backoffperiod "<<backoffPeriod<< " upperbound "<<upperBound);
   if (IsUnSlottedCsmaCa ())
     {
-      RfMacTypeTag typeTag;
-      GetMac ()->m_txPkt->PeekPacketTag (typeTag);
-      // if(typeTag.IsRfe ())
-      //   {
-      //     NS_LOG_LOGIC ("Unslotted: requesting CCA after backoff of " << randomBackoff.GetMicroSeconds () << " us");
-      //     m_requestCcaEvent = Simulator::Schedule (randomBackoff, &LrWpanCsmaCa::RequestCCA, this);
-      //   }
-      // else
-      //   {
-      NS_LOG_LOGIC ("is rfe "<<typeTag.IsRfe ());
-          Time rfMacBackoff = MicroSeconds ((uint64_t)m_random->GetValue (32, 1025) * (m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds () + ((m_mac->m_maxVoltage - m_mac->m_currentVoltage) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage)) 
-          * (m_mac->GetSlotTimeOfData ().GetMicroSeconds () - m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds ())));
-          NS_LOG_LOGIC ("Unslotted rf mac backoff: backoff for data " << rfMacBackoff.GetMicroSeconds () << " us");
-          m_requestCcaEvent = Simulator::Schedule (rfMacBackoff, &LrWpanCsmaCa::RequestCCA, this);
-        // }
+      NS_LOG_LOGIC ("Unslotted: requesting CCA after backoff of " << randomBackoff.GetMicroSeconds () << " us");
+      m_requestCcaEvent = Simulator::Schedule (randomBackoff, &LrWpanCsmaCa::RequestCCA, this);
     }
   else
     {
       NS_LOG_LOGIC ("Slotted:  proceeding after backoff of " << randomBackoff.GetMicroSeconds () << " us");
       m_canProceedEvent = Simulator::Schedule (randomBackoff, &LrWpanCsmaCa::CanProceed, this);
+    }
+}
+
+void
+LrWpanCsmaCa::PerformRfMacBackoffDelay (void)
+{
+  NS_LOG_FUNCTION (this);
+  RfMacTypeTag typeTag;
+  GetMac ()->m_txPkt->PeekPacketTag (typeTag);
+
+  Time rfMacBackoff;
+  if (typeTag.IsRfe ())
+    {
+      rfMacBackoff = m_mac->GetDifsOfEnergy () + randomBackoff;
+      NS_LOG_LOGIC ("back off" << randomBackoff.GetMicroSeconds () << " us");
+    }
+  else if (typeTag.IsData ())
+    {
+      rfMacBackoff = m_mac->GetDifsOfData () + MicroSeconds ((uint64_t)m_random->GetValue (32, 1025) * (m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds () + ((m_mac->m_maxVoltage - m_mac->m_currentVoltage) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage)) 
+      * (m_mac->GetSlotTimeOfData ().GetMicroSeconds () - m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds ())));
+      NS_LOG_LOGIC ("Unslotted rf mac backoff: backoff for data " << rfMacBackoff.GetMicroSeconds () << " us");
+    }
+
+  if (!m_lrWpanMacStateCallback.IsNull ())
+    {
+      NS_LOG_LOGIC ("Notifying MAC of idle channel");
+      m_rfMacBackOffEvent = Simulator::Schedule (rfMacBackoff, &LrWpanCsmaCa::m_lrWpanMacStateCallback, this, CHANNEL_IDLE);
     }
 }
 
@@ -343,14 +371,16 @@ LrWpanCsmaCa::PlmeCcaConfirm (LrWpanPhyEnumeration status)
                   m_requestCcaEvent = Simulator::ScheduleNow (&LrWpanCsmaCa::RequestCCA, this); // Perform CCA again
                 }
             }
-          else
+          else //unslotted
             {
               // inform MAC, channel is idle
-              if (!m_lrWpanMacStateCallback.IsNull ())
-                {
-                  NS_LOG_LOGIC ("Notifying MAC of idle channel");
-                  m_lrWpanMacStateCallback (CHANNEL_IDLE);
-                }
+
+              m_rfMacBackOffEvent = Simulator::ScheduleNow (&LrWpanCsmaCa::PerformRfMacBackoffDelay, this);
+              // if (!m_lrWpanMacStateCallback.IsNull ())
+              //   {
+              //     NS_LOG_LOGIC ("Notifying MAC of idle channel");
+              //     m_lrWpanMacStateCallback (CHANNEL_IDLE);
+              //   }
             }
         }
       else

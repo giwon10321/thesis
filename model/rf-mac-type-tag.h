@@ -44,6 +44,7 @@ public:
   bool IsCfe (void) const;
   bool IsCfeAck (void) const;
   bool IsEnergy (void) const;
+  bool IsData (void) const;
   
 private:
   uint8_t m_type;

@@ -13,6 +13,7 @@ NS_OBJECT_ENSURE_REGISTERED (LrWpanSensorNetDevice);
 /*
 	capacity : 150mAh
 	V : 2.0~3.0
+	C : 540
 */
 TypeId
 LrWpanSensorNetDevice::GetTypeId(void)

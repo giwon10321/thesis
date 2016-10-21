@@ -23,7 +23,7 @@ RfMacTypeTag::GetInstanceTypeId (void) const
 }
 
 RfMacTypeTag::RfMacTypeTag (void)
-  : m_type (0)
+  : m_type (RF_MAC_RESERVED)
 {
 }
 
@@ -104,5 +104,11 @@ bool
 RfMacTypeTag::IsEnergy (void) const
 {
   return (m_type == RF_MAC_ENERGY);
+}
+
+bool
+RfMacTypeTag::IsData (void) const
+{
+  return (m_type == RF_MAC_DATA);
 }
 }
