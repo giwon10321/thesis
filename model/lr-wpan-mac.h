@@ -610,6 +610,14 @@ public:
   double m_currentVoltage;
 
   double m_idx;
+
+
+  /**
+   * The packet which is currently being sent by the MAC layer.
+   */
+  Ptr<Packet> m_txPkt;  // XXX need packet buffer instead of single packet
+
+  
 protected:
   // Inherited from Object.
   virtual void DoInitialize (void);
@@ -827,11 +835,6 @@ private:
    * The current association status of the MAC layer.
    */
   LrWpanAssociationStatus m_associationStatus;
-
-  /**
-   * The packet which is currently being sent by the MAC layer.
-   */
-  Ptr<Packet> m_txPkt;  // XXX need packet buffer instead of single packet
 
   /**
    * The short address used by this MAC. Currently we do not have complete
