@@ -240,6 +240,8 @@ public:
 
 
   void PerformRfMacBackoffDelay (void);
+  void NotifyToMac (void);
+  void StopTimer (void);
 
 private:
   // Disable implicit copy constructors

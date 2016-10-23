@@ -239,6 +239,7 @@ LrWpanCsmaCa::Cancel ()
   m_randomBackoffEvent.Cancel ();
   m_requestCcaEvent.Cancel ();
   m_canProceedEvent.Cancel ();
+  m_rfMacBackOffEvent.Cancel ();
 }
 
 /*
@@ -255,7 +256,6 @@ LrWpanCsmaCa::RandomBackoffDelay ()
   Time randomBackoff;
   uint64_t symbolRate;
   bool isData = false;
-
 
   symbolRate = (uint64_t) m_mac->GetPhy ()->GetDataOrSymbolRate (isData); //symbols per second
   backoffPeriod = (uint64_t)m_random->GetValue (0, upperBound+1); // num backoff periods
@@ -277,26 +277,72 @@ void
 LrWpanCsmaCa::PerformRfMacBackoffDelay (void)
 {
   NS_LOG_FUNCTION (this);
+
+  uint64_t upperBound = (uint64_t) pow (2, m_BE) - 1;
+  uint64_t backoffPeriod;
+  Time randomBackoff;
+  uint64_t symbolRate;
+  bool isData = false;
+
+  symbolRate = (uint64_t) m_mac->GetPhy ()->GetDataOrSymbolRate (isData); //symbols per second
+  backoffPeriod = (uint64_t)m_random->GetValue (0, upperBound+1); // num backoff periods
+  randomBackoff = MicroSeconds (backoffPeriod * GetUnitBackoffPeriod () * 1000 * 1000 / symbolRate);
+
   RfMacTypeTag typeTag;
   GetMac ()->m_txPkt->PeekPacketTag (typeTag);
 
-  Time rfMacBackoff;
-  if (typeTag.IsRfe ())
+  //previous timer doesn't exist.
+  //So create new timer.
+  if(m_rfMacBackOffTime.IsNegative ()) 
     {
-      rfMacBackoff = m_mac->GetDifsOfEnergy () + randomBackoff;
-      NS_LOG_LOGIC ("back off" << randomBackoff.GetMicroSeconds () << " us");
+      if (typeTag.IsRfe ())
+      {
+        m_rfMacBackOffTime = randomBackoff;
+        NS_LOG_LOGIC ("back off " << m_rfMacBackOffTime.GetMicroSeconds () << " us");
+      }
+    else if (typeTag.IsData ())
+      {
+        m_rfMacBackOffTime = m_mac->GetDifsOfData () + MicroSeconds ((uint64_t)m_random->GetValue (32, 1025) * (m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds () + ((m_mac->m_maxVoltage - m_mac->m_currentVoltage) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage)) 
+        * (m_mac->GetSlotTimeOfData ().GetMicroSeconds () - m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds ())));
+        NS_LOG_LOGIC ("Unslotted rf mac backoff: backoff for data " << m_rfMacBackOffTime.GetMicroSeconds () << " us");
+      }  
     }
-  else if (typeTag.IsData ())
+  else
     {
-      rfMacBackoff = m_mac->GetDifsOfData () + MicroSeconds ((uint64_t)m_random->GetValue (32, 1025) * (m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds () + ((m_mac->m_maxVoltage - m_mac->m_currentVoltage) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage)) 
-      * (m_mac->GetSlotTimeOfData ().GetMicroSeconds () - m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds ())));
-      NS_LOG_LOGIC ("Unslotted rf mac backoff: backoff for data " << rfMacBackoff.GetMicroSeconds () << " us");
+      NS_LOG_LOGIC ("previous timer exists " << m_rfMacBackOffTime.GetMicroSeconds () << " us");
     }
+  
+  m_rfMacTimerLastUpdatedTime = Simulator::Now ();
+  m_rfMacBackOffEvent = Simulator::Schedule (m_rfMacBackOffTime, &LrWpanCsmaCa::NotifyToMac, this);
+}
 
+void
+LrWpanCsmaCa::NotifyToMac (void)
+{
+  NS_LOG_FUNCTION (this);
+  m_rfMacBackOffTime = Time (0);
   if (!m_lrWpanMacStateCallback.IsNull ())
     {
       NS_LOG_LOGIC ("Notifying MAC of idle channel");
-      m_rfMacBackOffEvent = Simulator::Schedule (rfMacBackoff, &LrWpanCsmaCa::m_lrWpanMacStateCallback, this, CHANNEL_IDLE);
+      m_lrWpanMacStateCallback (CHANNEL_IDLE);
+    }
+}
+
+void
+LrWpanCsmaCa::StopTimer (void)
+{
+  NS_LOG_FUNCTION (this);
+  m_requestCcaEvent.Cancel ();
+
+  if (m_rfMacBackOffEvent.IsRunning ())
+    {
+      m_rfMacBackOffEvent.Cancel ();
+
+      Time gap = Simulator::Now () - m_rfMacTimerLastUpdatedTime;
+      if (gap > 0)
+        {
+          m_rfMacBackOffTime = m_rfMacBackOffTime - gap;
+        }
     }
 }
 
@@ -373,9 +419,9 @@ LrWpanCsmaCa::PlmeCcaConfirm (LrWpanPhyEnumeration status)
             }
           else //unslotted
             {
-              // inform MAC, channel is idle
+              Simulator::ScheduleNow (&LrWpanCsmaCa::PerformRfMacBackoffDelay, this);
 
-              m_rfMacBackOffEvent = Simulator::ScheduleNow (&LrWpanCsmaCa::PerformRfMacBackoffDelay, this);
+              // inform MAC, channel is idle
               // if (!m_lrWpanMacStateCallback.IsNull ())
               //   {
               //     NS_LOG_LOGIC ("Notifying MAC of idle channel");

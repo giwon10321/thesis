@@ -625,6 +625,11 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
               if (receivedMacHdr.IsRfMac ())
                 {
                   NS_LOG_DEBUG ("This packet is rf-mac type");
+                  if (m_lrWpanMacState == MAC_CSMA)
+                    {
+                      m_csmaCa->StopTimer ();
+                    }
+
                   RfMacTypeTag typeTag;
                   originalPkt->PeekPacketTag (typeTag);
                   if (IsEdt ())
@@ -705,7 +710,8 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                       // \todo: If we receive a packet while doing CSMA/CA, should  we drop the packet because of channel busy,
                       //        or should we restart CSMA/CA for the packet after sending the ACK?
                       // Currently we simply restart CSMA/CA after sending the ACK.
-                      m_csmaCa->Cancel ();
+                      // m_csmaCa->Cancel ();
+                      m_csmaCa->StopTimer ();
                     }
                   // Cancel any pending MAC state change, ACKs have higher priority.
                   m_setMacState.Cancel ();

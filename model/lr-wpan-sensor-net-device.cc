@@ -14,6 +14,8 @@ NS_OBJECT_ENSURE_REGISTERED (LrWpanSensorNetDevice);
 	capacity : 150mAh
 	V : 2.0~3.0
 	C : 540
+
+	T = 132.3 * 20/E max rx
 */
 TypeId
 LrWpanSensorNetDevice::GetTypeId(void)
@@ -37,9 +39,9 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	m_maxVoltage = 3.0;
 
 	GetMac ()->m_minThresholdVoltage = 2.3;
+	GetMac ()->m_maxThresholdVoltage = 3.0;
 	GetMac ()->m_minVoltage = 1.8;
 	GetMac ()->m_maxVoltage = 3.0;
-	GetMac ()->m_maxThresholdVoltage = 0;
  	GetMac ()->m_currentVoltage = 2.9;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 }
