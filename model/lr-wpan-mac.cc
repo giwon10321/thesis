@@ -874,8 +874,6 @@ LrWpanMac::SendRfeForEnergy (void)
 
   m_txPkt = ackPacket;
 
-  // m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SendNow, this);
-  // m_rfMacTimer = Simulator::Schedule (GetDifsOfEnergy (), &LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
   Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
 }
 
@@ -934,7 +932,7 @@ LrWpanMac::SendAckAfterCfe (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_CFE_ACK);
 
   //need to calculate charging time T
-  Time chargingTime = MicroSeconds (100.0);
+  Time chargingTime = Seconds (5.0);
   RfMacDurationTag durationTag;
   durationTag.Set (chargingTime);
 
@@ -977,7 +975,7 @@ LrWpanMac::SendEnergyPulse (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_ENERGY);
 
   RfMacDurationTag durationTag;
-  durationTag.Set (MicroSeconds (100.0));
+  durationTag.Set (Seconds (5.0));
 
   energyPulse->AddPacketTag (typeTag);
   energyPulse->AddPacketTag (durationTag);

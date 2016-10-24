@@ -353,7 +353,6 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       double lamda = 0.145;
       uint32_t quotient = distance / lamda; // lamda is 0.145 in 2.4GHz environment.
       RfMacGroupTag groupTag;
-      NS_LOG_DEBUG ("distance : "<<distance);
       if (distance >= quotient * lamda - lamda / 4 && distance <= quotient * lamda + lamda / 4)
         {
           groupTag.Set (1);
@@ -362,6 +361,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
         {
           groupTag.Set (2);
         }
+      NS_LOG_DEBUG ("distance: "<<distance <<" group: "<<static_cast<uint32_t>(groupTag.Get ()));
       p->AddPacketTag (groupTag);
     }
 
@@ -396,7 +396,8 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 
       if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning () || m_energyRx.IsRunning ())
         {
-          m_receivedEnergy += watt;
+          NS_LOG_DEBUG (this << " watt: "<< watt << " duration: "<<durationTag.Get ().ToDouble (Time::S));
+          m_receivedEnergy += watt * durationTag.Get ().ToDouble (Time::S);
         }
       // Std. 802.15.4-2006, appendix E, Figure E.2
       // At SNR < -5 the BER is less than 10e-1.
@@ -633,13 +634,17 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
           // LrWpanLqiTag lqiTag;
           // p->RemovePacketTag (lqiTag);
 
+          RfMacTypeTag typeTag;
+          p->PeekPacketTag (typeTag);
+
+
           RfMacDurationTag durationTag;
           p->PeekPacketTag (durationTag);
           Time duration = durationTag.Get ();
 
           Ptr<LrWpanSpectrumSignalParameters> txParams = Create<LrWpanSpectrumSignalParameters> ();
           txParams->duration = CalculateTxTime (p);
-          if (duration.IsStrictlyPositive ())
+          if (duration.IsStrictlyPositive () && !typeTag.IsCfeAck ())
           {
             txParams->duration = duration;
           }
