@@ -62,7 +62,7 @@ int main (int argc, char *argv[])
 {
   bool verbose = false;
   uint8_t nSensorNode = 1;
-  uint8_t nEnergyNode = 20;
+  uint8_t nEnergyNode = 3;
 
   CommandLine cmd;
 
@@ -96,7 +96,7 @@ int main (int argc, char *argv[])
   mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
                                 "X", StringValue ("100.0"),
                                 "Y", StringValue ("100.0"),
-                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=5]"));
+                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=2.5]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nodes);
 

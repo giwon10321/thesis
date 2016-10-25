@@ -139,6 +139,8 @@ LrWpanNetDevice::CompleteConfig (void)
   m_phy->SetErrorModel (model);
   m_phy->SetDevice (this);
 
+  NS_LOG_DEBUG ("position : "<<mobility->GetPosition ());
+
   m_phy->SetPdDataIndicationCallback (MakeCallback (&LrWpanMac::PdDataIndication, m_mac));
   m_phy->SetPdDataConfirmCallback (MakeCallback (&LrWpanMac::PdDataConfirm, m_mac));
   m_phy->SetPlmeEdConfirmCallback (MakeCallback (&LrWpanMac::PlmeEdConfirm, m_mac));
