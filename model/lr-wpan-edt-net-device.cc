@@ -28,7 +28,7 @@ LrWpanEdtNetDevice::LrWpanEdtNetDevice (void)
 	NS_LOG_FUNCTION (this);
 	GetMac ()->SetDeviceType (MAC_FOR_EDT);
 	GetPhy ()->m_phyPIBAttributes.phyCurrentChannel = 11;
-  	GetPhy ()->m_phyPIBAttributes.phyTransmitPower = 50;
+  	GetPhy ()->m_phyPIBAttributes.phyTransmitPower = 30;
 
   	LrWpanSpectrumValueHelper psdHelper;
   	GetPhy ()->m_txPsd = psdHelper.CreateTxPowerSpectralDensity (GetPhy ()->m_phyPIBAttributes.phyTransmitPower,

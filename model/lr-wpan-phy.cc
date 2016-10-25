@@ -386,12 +386,13 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       // SINR.
       double watt = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
       double receivedPower = 10 * log10(watt) + 30;
-      NS_LOG_DEBUG (this << " receiving packet with power: " << receivedPower << "dBm");
+      
       m_signal->AddSignal (lrWpanRxParams->psd);
       Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd ();
       *interferenceAndNoise -= *lrWpanRxParams->psd;
       *interferenceAndNoise += *m_noise;
       double sinr = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel) / LrWpanSpectrumValueHelper::TotalAvgPower (interferenceAndNoise, m_phyPIBAttributes.phyCurrentChannel);
+      NS_LOG_DEBUG (this << " receiving packet with power: " << receivedPower << "dBm");
       NS_LOG_DEBUG (this << " sinr: " << sinr << "dB");
 
       if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning () || m_energyRx.IsRunning ())

@@ -96,7 +96,7 @@ int main (int argc, char *argv[])
   mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
                                 "X", StringValue ("100.0"),
                                 "Y", StringValue ("100.0"),
-                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=2.5]"));
+                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=5.0]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nodes);
 
@@ -142,7 +142,7 @@ int main (int argc, char *argv[])
   // Simulator::ScheduleWithContext (2, Seconds(1.0),
   //                               &LrWpanMac::McpsDataRequest,
   //                               dev2->GetMac(), params, p0);
-  Simulator::Stop (Seconds (10.0));
+  Simulator::Stop (Seconds (1000.0));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
