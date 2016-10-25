@@ -593,7 +593,7 @@ public:
 
   void SendAckAfterCfe (void);
 
-  void SendEnergyPulse (void);
+  void SendEnergyPulse (Time chargingTime);
 
   void SendNow (void);
 

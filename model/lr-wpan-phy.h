@@ -494,6 +494,16 @@ public:
   typedef void (* StateTracedCallback)
     (Time time, LrWpanPhyEnumeration oldState, LrWpanPhyEnumeration newState);
 
+  /**
+   * The current PHY PIB attributes.
+   */
+  LrWpanPhyPibAttributes m_phyPIBAttributes;
+
+  /**
+   * The transmit power spectral density.
+   */
+  Ptr<SpectrumValue> m_txPsd;
+
 protected:
   /**
    * The data and symbol rates for the different PHY options.
@@ -700,11 +710,6 @@ private:
   Ptr<AntennaModel> m_antenna;
 
   /**
-   * The transmit power spectral density.
-   */
-  Ptr<SpectrumValue> m_txPsd;
-
-  /**
    * The spectral density for for the noise.
    */
   Ptr<const SpectrumValue> m_noise;
@@ -713,11 +718,6 @@ private:
    * The error model describing the bit and packet error rates.
    */
   Ptr<LrWpanErrorModel> m_errorModel;
-
-  /**
-   * The current PHY PIB attributes.
-   */
-  LrWpanPhyPibAttributes m_phyPIBAttributes;
 
   // State variables
   /**

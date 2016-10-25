@@ -664,7 +664,10 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                           m_setMacState.Cancel ();
                           ChangeMacState (MAC_IDLE);
 
-                          m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendEnergyPulse, this);
+                          RfMacDurationTag chargingTime;
+                          originalPkt->PeekPacketTag (chargingTime);
+
+                          m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendEnergyPulse, this, chargingTime.Get ());
                         }
                       else // A edt doesn't need to receive except rfe, ack for cfe.
                         {
@@ -964,7 +967,7 @@ LrWpanMac::SendAckAfterCfe (void)
 }
 
 void
-LrWpanMac::SendEnergyPulse (void)
+LrWpanMac::SendEnergyPulse (Time chargingTime)
 {
   NS_LOG_FUNCTION (this);
   NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
@@ -975,7 +978,7 @@ LrWpanMac::SendEnergyPulse (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_ENERGY);
 
   RfMacDurationTag durationTag;
-  durationTag.Set (Seconds (5.0));
+  durationTag.Set (chargingTime);
 
   energyPulse->AddPacketTag (typeTag);
   energyPulse->AddPacketTag (durationTag);
