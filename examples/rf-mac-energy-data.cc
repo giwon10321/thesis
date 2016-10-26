@@ -84,7 +84,11 @@ int main (int argc, char *argv[])
   // GlobalValue::Bind ("ChecksumEnabled", BooleanValue (true));
 
   Ptr<SingleModelSpectrumChannel> channel = CreateObject<SingleModelSpectrumChannel> ();
-  Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
+  // Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
+  Ptr<FriisPropagationLossModel> propModel = CreateObjectWithAttributes<FriisPropagationLossModel>
+                                              ("Frequency", DoubleValue (2.4e9),
+                                                "SystemLoss", DoubleValue (1.0),
+                                                "MinLoss", DoubleValue (0.0));
   Ptr<ConstantSpeedPropagationDelayModel> delayModel = CreateObject<ConstantSpeedPropagationDelayModel> ();
   channel->AddPropagationLossModel (propModel);
   channel->SetPropagationDelayModel (delayModel);
@@ -96,7 +100,7 @@ int main (int argc, char *argv[])
   mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
                                 "X", StringValue ("100.0"),
                                 "Y", StringValue ("100.0"),
-                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=5.0]"));
+                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=2.5]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nodes);
 
