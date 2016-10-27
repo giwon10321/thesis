@@ -11,9 +11,10 @@ NS_LOG_COMPONENT_DEFINE ("LrWpanSensorNetDevice");
 
 NS_OBJECT_ENSURE_REGISTERED (LrWpanSensorNetDevice);
 /*
-	capacity : 150mAh
+	capacity : 30mAh
 	V : 2.0~3.0
-	C : 540
+	Q : 108
+	C : 108/3 = 36
 
 	T = 132.3 * 20/E max rx
 */
@@ -44,6 +45,9 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	GetMac ()->m_maxVoltage = 3.0;
  	GetMac ()->m_currentVoltage = 2.9;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
+	GetMac ()->SetRfMacEnergyIndicationCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyIndication, this));
+
+	GetPhy ()->SetRfMacEnergyConsumtionCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyConsumtion, this));
 }
 
 LrWpanSensorNetDevice::~LrWpanSensorNetDevice (void)
@@ -63,7 +67,7 @@ void
 LrWpanSensorNetDevice::DoInitialize (void)
 {
 	NS_LOG_FUNCTION (this);
-	UpdatePower ();
+	// UpdatePower ();
 	LrWpanNetDevice::DoInitialize ();
 }
 
@@ -102,6 +106,18 @@ LrWpanSensorNetDevice::UpdatePower(void)
 	
 	m_energyUpdateEvent.Cancel ();
 	m_energyUpdateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::UpdatePower, this);
+}
+
+void
+LrWpanSensorNetDevice::RfMacEnergyIndication (double energy)
+{
+	NS_LOG_DEBUG ("Received Power: "<<energy);
+}
+
+void
+LrWpanSensorNetDevice::RfMacEnergyConsumtion (double energy)
+{
+	NS_LOG_DEBUG ("Consumed Power: "<<energy);
 }
 
 }//namespace ns3

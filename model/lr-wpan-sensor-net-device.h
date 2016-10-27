@@ -16,6 +16,9 @@ public:
 	void SetResidualEnergy (double energy);
 	double GetResidualEnergy (void) const;
 
+	void RfMacEnergyIndication (double energy);
+	void RfMacEnergyConsumtion (double energy);
+
 	double m_residualEnergy;
 	double m_minThresholdVoltage;
 

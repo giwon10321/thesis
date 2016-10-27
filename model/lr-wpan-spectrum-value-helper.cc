@@ -143,4 +143,21 @@ LrWpanSpectrumValueHelper::TotalAvgPower (Ptr<const SpectrumValue> psd, uint32_t
   return totalAvgPower;
 }
 
+double
+LrWpanSpectrumValueHelper::TotalEnergy (Ptr<SpectrumValue> psd, uint32_t channel)
+{
+  NS_LOG_FUNCTION (psd);
+  
+  double totalEnergy = 0.0;
+  NS_ASSERT (psd->GetSpectrumModel () == g_LrWpanSpectrumModel);
+
+  totalEnergy += ((*psd)[2405 + 5 * (channel - 11) - 2400 - 2] * (*psd)[2405 + 5 * (channel - 11) - 2400 - 2]);
+  totalEnergy += ((*psd)[2405 + 5 * (channel - 11) - 2400 - 2] * (*psd)[2405 + 5 * (channel - 11) - 2400 - 2]);
+  totalEnergy += ((*psd)[2405 + 5 * (channel - 11) - 2400 + 1] * (*psd)[2405 + 5 * (channel - 11) - 2400 + 1]);
+  totalEnergy += ((*psd)[2405 + 5 * (channel - 11) - 2400 + 2] * (*psd)[2405 + 5 * (channel - 11) - 2400 + 2]);
+  totalEnergy *= 4*1.0e12;
+
+  return totalEnergy;
+}
+
 } // namespace ns3

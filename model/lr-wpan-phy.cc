@@ -392,8 +392,10 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       *interferenceAndNoise -= *lrWpanRxParams->psd;
       *interferenceAndNoise += *m_noise;
       double sinr = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel) / LrWpanSpectrumValueHelper::TotalAvgPower (interferenceAndNoise, m_phyPIBAttributes.phyCurrentChannel);
+      // double energy = LrWpanSpectrumValueHelper::TotalEnergy (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
       NS_LOG_DEBUG (this << " receiving packet with power: " << receivedPower << "dBm");
-      NS_LOG_DEBUG (this << " sinr: " << sinr << "dB");
+      // NS_LOG_DEBUG (this << " energy: "<< energy);
+      // NS_LOG_DEBUG (this << " sinr: " << sinr << "dB");
 
       if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning () || m_energyRx.IsRunning ())
         {
@@ -645,7 +647,8 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
 
           Ptr<LrWpanSpectrumSignalParameters> txParams = Create<LrWpanSpectrumSignalParameters> ();
           txParams->duration = CalculateTxTime (p);
-          if (duration.IsStrictlyPositive () && !typeTag.IsCfeAck ())
+          // NS_LOG_DEBUG ("calculate tx time p: "<<txParams->duration);
+          if (!typeTag.IsCfeAck () && duration.IsStrictlyPositive ())
           {
             txParams->duration = duration;
           }
@@ -659,6 +662,7 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
           m_channel->StartTx (txParams);
 
           m_pdDataRequest = Simulator::Schedule (txParams->duration, &LrWpanPhy::EndTx, this);
+          Simulator::Schedule (txParams->duration, &LrWpanPhy::CalculateEnergyConsumtion, this, txParams);
 
           ChangeTrxState (IEEE_802_15_4_PHY_BUSY_TX);
 
@@ -695,6 +699,34 @@ LrWpanPhy::PdDataRequest (const uint32_t psduLength, Ptr<Packet> p)
       // Drop packet, hit PhyTxDrop trace
       m_phyTxDropTrace (p);
       return;
+    }
+}
+
+void
+LrWpanPhy::CalculateEnergyConsumtion (Ptr<SpectrumSignalParameters> spectrumRxParams)
+{
+  Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams = DynamicCast<LrWpanSpectrumSignalParameters> (spectrumRxParams);
+  Ptr<Packet> p = (lrWpanRxParams->packetBurst->GetPackets ()).front ();
+  double watt = LrWpanSpectrumValueHelper::TotalAvgPower (lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
+  RfMacDurationTag durationTag;
+  p->PeekPacketTag (durationTag);
+
+  Time duration;
+  if(durationTag.Get ().IsStrictlyPositive ())
+    {
+      duration = durationTag.Get ();
+    }
+  else
+    {
+      duration = lrWpanRxParams->duration; 
+    }
+
+  NS_LOG_DEBUG ("power: "<<watt<< " duration: "<<duration.ToDouble (Time::S));
+
+  double energy = watt * duration.ToDouble (Time::S);
+  if(!m_rfMacEnergyConsumtionCallback.IsNull ())
+    {
+      m_rfMacEnergyConsumtionCallback (energy); 
     }
 }
 
@@ -1112,6 +1144,13 @@ LrWpanPhy::SetPdEnergyIndicationCallback (PdEnergyIndicationCallback c)
 {
   NS_LOG_FUNCTION (this);
   m_pdEnergyIndicationCallback = c;
+}
+
+void
+LrWpanPhy::SetRfMacEnergyConsumtionCallback (RfMacEnergyConsumtionCallback c)
+{
+  NS_LOG_FUNCTION (this);
+  m_rfMacEnergyConsumtionCallback = c;
 }
 
 void

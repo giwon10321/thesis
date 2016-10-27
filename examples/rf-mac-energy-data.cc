@@ -85,12 +85,12 @@ int main (int argc, char *argv[])
 
   Ptr<SingleModelSpectrumChannel> channel = CreateObject<SingleModelSpectrumChannel> ();
   // Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
-  Ptr<FriisPropagationLossModel> propModel = CreateObjectWithAttributes<FriisPropagationLossModel>
-                                              ("Frequency", DoubleValue (2.4e9),
-                                                "SystemLoss", DoubleValue (1.0),
-                                                "MinLoss", DoubleValue (0.0));
+  // Ptr<FriisPropagationLossModel> propModel = CreateObjectWithAttributes<FriisPropagationLossModel>
+  //                                             ("Frequency", DoubleValue (2.4e9),
+  //                                               "SystemLoss", DoubleValue (1.0),
+  //                                               "MinLoss", DoubleValue (0.0));
   Ptr<ConstantSpeedPropagationDelayModel> delayModel = CreateObject<ConstantSpeedPropagationDelayModel> ();
-  channel->AddPropagationLossModel (propModel);
+  // channel->AddPropagationLossModel (propModel);
   channel->SetPropagationDelayModel (delayModel);
 
   NodeContainer nodes;

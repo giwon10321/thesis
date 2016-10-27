@@ -486,6 +486,12 @@ LrWpanMac::SetMcpsDataConfirmCallback (McpsDataConfirmCallback c)
 }
 
 void
+LrWpanMac::SetRfMacEnergyIndicationCallback (RfMacEnergyIndicationCallback c)
+{
+  m_rfMacEnergyIndicationCallback = c;
+}
+
+void
 LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 {
   NS_ASSERT (m_lrWpanMacState == MAC_IDLE
@@ -810,6 +816,11 @@ LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
     else
       {
 
+      }
+
+    if (!m_rfMacEnergyIndicationCallback.IsNull ())
+      {
+        m_rfMacEnergyIndicationCallback (energy);
       }
     m_txPkt = 0;
     m_setMacState.Cancel ();

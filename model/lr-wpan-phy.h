@@ -240,6 +240,8 @@ typedef Callback< void, LrWpanPhyEnumeration > PlmeSetTRXStateConfirmCallback;
 typedef Callback< void, LrWpanPhyEnumeration,
                   LrWpanPibAttributeIdentifier > PlmeSetAttributeConfirmCallback;
 
+typedef Callback< void, double > RfMacEnergyConsumtionCallback;
+
 /**
  * \ingroup lr-wpan
  *
@@ -337,6 +339,9 @@ public:
    */
   void PdDataRequest (const uint32_t psduLength, Ptr<Packet> p);
 
+
+  void CalculateEnergyConsumtion (Ptr<SpectrumSignalParameters> spectrumRxParams);
+
   /**
    *  IEEE 802.15.4-2006 section 6.2.2.1
    *  PLME-CCA.request
@@ -383,9 +388,12 @@ public:
    * @param c the callback
    */
   void SetPdDataIndicationCallback (PdDataIndicationCallback c);
-  
+
 
   void SetPdEnergyIndicationCallback (PdEnergyIndicationCallback c);
+
+
+  void SetRfMacEnergyConsumtionCallback (RfMacEnergyConsumtionCallback c);
 
   /**
    * set the callback for the end of a TX, as part of the
@@ -738,7 +746,11 @@ private:
    */
   PdDataIndicationCallback m_pdDataIndicationCallback;
 
+
   PdEnergyIndicationCallback m_pdEnergyIndicationCallback;
+
+
+  RfMacEnergyConsumtionCallback m_rfMacEnergyConsumtionCallback;
 
   /**
    * This callback is used to report packet transmission status to the MAC layer.

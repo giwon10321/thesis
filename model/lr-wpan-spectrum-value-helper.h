@@ -60,6 +60,7 @@ public:
    * \return total power (using composite trap. rule to numerally integrate)
    */
   static double TotalAvgPower (Ptr<const SpectrumValue> psd, uint32_t channel);
+  static double TotalEnergy (Ptr<SpectrumValue> psd, uint32_t channel);
 
 private:
   /**

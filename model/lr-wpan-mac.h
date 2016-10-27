@@ -224,6 +224,9 @@ typedef Callback<void, McpsDataConfirmParams> McpsDataConfirmCallback;
 typedef Callback<void, McpsDataIndicationParams, Ptr<Packet> > McpsDataIndicationCallback;
 
 
+typedef Callback<void, double > RfMacEnergyIndicationCallback;
+
+
 /**
  * \ingroup lr-wpan
  *
@@ -359,6 +362,8 @@ public:
    * \param c the callback
    */
   void SetMcpsDataConfirmCallback (McpsDataConfirmCallback c);
+
+  void SetRfMacEnergyIndicationCallback (RfMacEnergyIndicationCallback c);
 
   // interfaces between MAC and PHY
   /**
@@ -825,6 +830,9 @@ private:
    * See IEEE 802.15.4-2006, section 7.1.1.2.
    */
   McpsDataConfirmCallback m_mcpsDataConfirmCallback;
+
+
+  RfMacEnergyIndicationCallback m_rfMacEnergyIndicationCallback;
 
   /**
    * The current state of the MAC layer.

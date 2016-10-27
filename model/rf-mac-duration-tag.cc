@@ -6,6 +6,7 @@ namespace ns3 {
 NS_OBJECT_ENSURE_REGISTERED (RfMacDurationTag);
 
 RfMacDurationTag::RfMacDurationTag ()
+  :m_duration (0)
 {
 }
 
