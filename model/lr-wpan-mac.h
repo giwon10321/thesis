@@ -899,7 +899,8 @@ private:
 
   uint8_t m_groupNumber;
 
-  Ptr<Packet> m_bufferedPacket;
+  std::vector<Ptr<Packet> > bufferedPackets;
+  std::vector<Ptr<Packet> > receivedPackets;
 
   Mac16Address m_cfeDstAddress;
   uint16_t m_cfeDstPanId;

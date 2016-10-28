@@ -164,7 +164,8 @@ LrWpanMac::LrWpanMac ()
   Ptr<UniformRandomVariable> uniformVar = CreateObject<UniformRandomVariable> ();
   uniformVar->SetAttribute ("Min", DoubleValue (0.0));
   uniformVar->SetAttribute ("Max", DoubleValue (255.0));
-  m_macDsn = SequenceNumber8 (uniformVar->GetValue ());
+  // m_macDsn = SequenceNumber8 (uniformVar->GetValue ());
+  m_macDsn = 0;
   m_shortAddress = Mac16Address ("00:00");
 }
 
@@ -276,6 +277,7 @@ LrWpanMac::McpsDataRequest (McpsDataRequestParams params, Ptr<Packet> p)
   //       and footer, while packets being dropped here do not have them.
 
   LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_DATA, m_macDsn.GetValue ());
+  // LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_DATA, seqno);
   m_macDsn++;
 
   if (p->GetSize () > LrWpanPhy::aMaxPhyPacketSize - aMinMPDUOverhead)
@@ -439,7 +441,6 @@ LrWpanMac::McpsDataRequest (McpsDataRequestParams params, Ptr<Packet> p)
   m_txQueue.push_back (txQElement);
 
   CheckQueue ();
-  // m_rfMacTimer = Simulator::Schedule (GetDifsOfData (), &LrWpanMac::CheckQueue, this);
 }
 
 void
@@ -581,6 +582,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
           if (acceptFrame)
             {
               acceptFrame = (receivedMacHdr.GetFrameVer () <= 1);
+              // NS_LOG_DEBUG ("frame header");
             }
 
           if (acceptFrame
@@ -588,19 +590,21 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
             {
               acceptFrame = receivedMacHdr.GetDstPanId () == m_macPanId
                 || receivedMacHdr.GetDstPanId () == 0xffff;
+                // NS_LOG_DEBUG ("addr mode 1");
             }
 
           if (acceptFrame
               && (receivedMacHdr.GetDstAddrMode () == 2))
             {
               acceptFrame = receivedMacHdr.GetShortDstAddr () == m_shortAddress
-                || receivedMacHdr.GetShortDstAddr () == Mac16Address ("ff:ff");        // check for broadcast addrs
+                || receivedMacHdr.GetShortDstAddr () == Mac16Address ("ff:ff") || IsEdt ();        // check for broadcast addrs
             }
 
           if (acceptFrame
               && (receivedMacHdr.GetDstAddrMode () == 3))
             {
               acceptFrame = (receivedMacHdr.GetExtDstAddr () == m_selfExt);
+              // NS_LOG_DEBUG ("addr mode 3");
             }
 
           if (acceptFrame
@@ -615,6 +619,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                 {
                   acceptFrame = receivedMacHdr.GetSrcPanId () == m_macPanId;
                 }
+                // NS_LOG_DEBUG ("beacon");
             }
 
           if (acceptFrame
@@ -623,6 +628,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
               && (receivedMacHdr.GetSrcAddrMode () > 1))
             {
               acceptFrame = receivedMacHdr.GetSrcPanId () == m_macPanId; // \todo need to check if PAN coord
+              // NS_LOG_DEBUG ("pan id");
             }
 
           if (acceptFrame)
@@ -702,8 +708,8 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 
               // If the received frame is a frame with the ACK request bit set, we immediately send back an ACK.
               // If we are currently waiting for a pending ACK, we assume the ACK was lost and trigger a retransmission after sending the ACK.
-              if ((receivedMacHdr.IsData () || receivedMacHdr.IsCommand ()) && receivedMacHdr.IsAckReq ()
-                  && !(receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff"))
+              if (((receivedMacHdr.IsData () || receivedMacHdr.IsCommand ()) && receivedMacHdr.IsAckReq ()
+                  && !(receivedMacHdr.GetDstAddrMode () == SHORT_ADDR && receivedMacHdr.GetShortDstAddr () == "ff:ff")) && !IsEdt ())
                 {
                   // If this is a data or mac command frame, which is not a broadcast,
                   // with ack req set, generate and send an ack frame.
@@ -729,7 +735,13 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SendAck, this, receivedMacHdr.GetSeqNum ());
                 }
 
-              if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull ())
+              if (receivedMacHdr.IsData () && IsEdt ())
+                {
+                  NS_LOG_DEBUG ("edt received a data packet which has seq no: "<<static_cast<uint32_t>(receivedMacHdr.GetSeqNum ()));
+                  bufferedPackets.push_back (originalPkt);
+                }
+
+              if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull () && !IsEdt ())
                 {
                   // If it is a data frame, push it up the stack.
                   NS_LOG_DEBUG ("PdDataIndication():  Packet is for me; forwarding up");

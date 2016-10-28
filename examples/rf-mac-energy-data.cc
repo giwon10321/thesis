@@ -61,8 +61,8 @@ static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnu
 int main (int argc, char *argv[])
 {
   bool verbose = false;
-  uint8_t nSensorNode = 10;
-  uint8_t nEnergyNode = 5;
+  uint8_t nSensorNode = 3;
+  uint8_t nEnergyNode = 3;
 
   CommandLine cmd;
 
@@ -138,14 +138,14 @@ int main (int argc, char *argv[])
   params.m_msduHandle = 0;
   params.m_txOptions = TX_OPTION_ACK;
 
-  Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  // Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Simulator::ScheduleWithContext (1, Seconds(1.0),
-                                &LrWpanMac::SendRfeForEnergy,
-                                 dev->GetMac ());
-  // Simulator::ScheduleWithContext (2, Seconds(1.0),
-  //                               &LrWpanMac::McpsDataRequest,
-  //                               dev2->GetMac(), params, p0);
+  // Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  // Simulator::ScheduleWithContext (1, Seconds(1.0),
+  //                               &LrWpanMac::SendRfeForEnergy,
+  //                                dev->GetMac ());
+  Simulator::ScheduleWithContext (2, Seconds(1.0),
+                                &LrWpanMac::McpsDataRequest,
+                                dev2->GetMac(), params, p0);
   Simulator::Stop (Seconds (1000.0));
   Simulator::Run ();
   Simulator::Destroy ();

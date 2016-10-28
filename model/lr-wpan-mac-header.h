@@ -58,19 +58,6 @@ public:
   /**
    * The possible MAC types, see IEEE 802.15.4-2006, Table 79.
    */
-  // enum LrWpanMacType
-  // {
-  //   LRWPAN_MAC_BEACON = 0,        //!< LRWPAN_MAC_BEACON
-  //   LRWPAN_MAC_DATA = 1,          //!< LRWPAN_MAC_DATA
-  //   LRWPAN_MAC_ACKNOWLEDGMENT = 2,//!< LRWPAN_MAC_ACKNOWLEDGMENT
-  //   LRWPAN_MAC_COMMAND = 3,       //!< LRWPAN_MAC_COMMAND
-		// LRWPAN_MAC_RFE = 4,
-		// LRWPAN_MAC_CFE = 5,
-		// LRWPAN_MAC_ENERGY = 6,
-  //   LRWPAN_MAC_CFE_ACK = 7,
-  //   LRWPAN_MAC_RESERVED           //!< LRWPAN_MAC_RESERVED
-  // };
-
   enum LrWpanMacType
   {
     LRWPAN_MAC_BEACON = 0,        //!< LRWPAN_MAC_BEACON
