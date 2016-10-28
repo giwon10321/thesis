@@ -17,6 +17,7 @@ NS_OBJECT_ENSURE_REGISTERED (LrWpanSensorNetDevice);
 	C : 108/3 = 36
 
 	T = 132.3 * 20/E max rx
+
 */
 TypeId
 LrWpanSensorNetDevice::GetTypeId(void)

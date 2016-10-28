@@ -61,8 +61,8 @@ static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnu
 int main (int argc, char *argv[])
 {
   bool verbose = false;
-  uint8_t nSensorNode = 2;
-  uint8_t nEnergyNode = 3;
+  uint8_t nSensorNode = 10;
+  uint8_t nEnergyNode = 5;
 
   CommandLine cmd;
 

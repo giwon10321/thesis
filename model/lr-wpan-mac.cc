@@ -494,6 +494,7 @@ LrWpanMac::SetRfMacEnergyIndicationCallback (RfMacEnergyIndicationCallback c)
 void
 LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 {
+  NS_LOG_DEBUG ("state: "<<m_lrWpanMacState);
   NS_ASSERT (m_lrWpanMacState == MAC_IDLE
               || m_lrWpanMacState == MAC_ACK_PENDING
               || m_lrWpanMacState == MAC_CSMA
@@ -905,11 +906,10 @@ LrWpanMac::SendCfeAfterRfe (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_CFE);
 
   RfMacDurationTag durationTag;
-  durationTag.Set (MicroSeconds (10));
+  durationTag.Set (MicroSeconds (10.0));
 
   ackPacket->AddPacketTag (typeTag);
   ackPacket->AddPacketTag (durationTag);
-
 
   LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RF_MAC, 0);
   macHdr.SetSrcAddrMode (SHORT_ADDR);
@@ -946,10 +946,10 @@ LrWpanMac::SendAckAfterCfe (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_CFE_ACK);
 
   //need to calculate charging time T
-  Time chargingTime = Seconds (60.0);
-
-  double requiredEnergy = 1/2 * 36 * (m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
-  NS_LOG_DEBUG ("required energy: "<<requiredEnergy);
+  double requiredEnergy = 0.5*36*(m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
+  double time = requiredEnergy / (m_receivedEnergyFromFirstSlot + m_receivedEnergyFromSecondSlot);
+  NS_LOG_DEBUG ("max v: "<<m_maxThresholdVoltage<< " min v: "<<m_minThresholdVoltage<< " required energy: "<<requiredEnergy<<" charging time: "<<time);
+  Time chargingTime = Seconds (time);
 
   RfMacDurationTag durationTag;
   durationTag.Set (chargingTime);

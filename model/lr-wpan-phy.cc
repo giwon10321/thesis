@@ -285,14 +285,6 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 {
   NS_LOG_FUNCTION (this << spectrumRxParams);
   LrWpanSpectrumValueHelper psdHelper;
-  // if (m_trxState == PHY_CFE_RX)
-  //   {
-  //     if(!m_firstEnergySlot.IsRunning () && !m_secondEnergySlot.IsRunning ())
-  //       {
-          // m_firstEnergySlot = Simulator::Schedule (MicroSeconds(10.0), &LrWpanPhy::EndEnergyRx, this, 1);
-          // m_secondEnergySlot = Simulator::Schedule (MicroSeconds(20.0), &LrWpanPhy::EndEnergyRx, this, 2);
-  //       }
-  //   }
 
   if (!m_edRequest.IsExpired ())
     {
@@ -366,7 +358,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
     }
 
   // Prevent PHY from receiving another packet while switching the transceiver state.
-  if ((m_trxState == IEEE_802_15_4_PHY_RX_ON) && !m_setTRXState.IsRunning ())
+  if (m_trxState == IEEE_802_15_4_PHY_RX_ON && !m_setTRXState.IsRunning ())
     {
       // The specification doesn't seem to refer to BUSY_RX, but vendor
       // data sheets suggest that this is a substate of the RX_ON state
@@ -397,20 +389,25 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       // NS_LOG_DEBUG (this << " energy: "<< energy);
       // NS_LOG_DEBUG (this << " sinr: " << sinr << "dB");
 
-      if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning () || m_energyRx.IsRunning ())
+      if(m_energyRx.IsRunning ())
         {
           NS_LOG_DEBUG (this << " watt: "<< watt << " duration: "<<durationTag.Get ().ToDouble (Time::S));
           m_receivedEnergy += watt * durationTag.Get ().ToDouble (Time::S);
+        }
+      else if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning ())
+        {
+          NS_LOG_DEBUG (this << " watt: "<< watt);
+          m_receivedEnergy += watt;  
         }
       // Std. 802.15.4-2006, appendix E, Figure E.2
       // At SNR < -5 the BER is less than 10e-1.
       // It's useless to even *try* to decode the packet.
       if (10 * log10 (sinr) > -5)
         {
-          // if (m_trxState == IEEE_802_15_4_PHY_RX_ON)
-          //   {
-          ChangeTrxState (IEEE_802_15_4_PHY_BUSY_RX);
-            // }
+          if(!typeTag.IsCfe () && !typeTag.IsEnergy ())
+            {
+              ChangeTrxState (IEEE_802_15_4_PHY_BUSY_RX);
+            }
           m_currentRxPacket = std::make_pair (lrWpanRxParams, false);
           m_phyRxBeginTrace (p);
           m_rxLastUpdate = Simulator::Now ();
