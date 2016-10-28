@@ -34,16 +34,21 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	: LrWpanNetDevice ()
 {
 	NS_LOG_FUNCTION (this);
-	m_updateInterval = Seconds (1.0);
 	m_minThresholdVoltage = 2.3;
 	m_minVoltage = 2.0;
 	m_maxVoltage = 3.0;
 
-	GetMac ()->m_minThresholdVoltage = 2.3;
-	GetMac ()->m_maxThresholdVoltage = 3.0;
-	GetMac ()->m_minVoltage = 1.8;
-	GetMac ()->m_maxVoltage = 3.0;
- 	GetMac ()->m_currentVoltage = 2.9;
+	m_currentVoltage = m_maxVoltage;
+
+	m_amh = 0.03;
+	m_q = m_amh * 3600;
+	m_c = m_q / m_maxVoltage;
+
+	GetMac ()->m_minThresholdVoltage = m_minThresholdVoltage;
+	GetMac ()->m_maxThresholdVoltage = m_maxVoltage;
+	GetMac ()->m_minVoltage = m_minVoltage;
+	GetMac ()->m_maxVoltage = m_maxVoltage;
+ 	GetMac ()->m_currentVoltage = m_maxVoltage;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 	GetMac ()->SetRfMacEnergyIndicationCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyIndication, this));
 
@@ -67,24 +72,7 @@ void
 LrWpanSensorNetDevice::DoInitialize (void)
 {
 	NS_LOG_FUNCTION (this);
-	// UpdatePower ();
 	LrWpanNetDevice::DoInitialize ();
-}
-
-
-void
-LrWpanSensorNetDevice::SetResidualEnergy (double energy)
-{
-	NS_LOG_FUNCTION (this);
-	m_residualEnergy = energy;
-}
-
-
-double
-LrWpanSensorNetDevice::GetResidualEnergy (void) const
-{
-	NS_LOG_FUNCTION (this);
-	return m_residualEnergy;
 }
 
 void
@@ -94,30 +82,19 @@ LrWpanSensorNetDevice::SendRfe (void)
 }
 
 void
-LrWpanSensorNetDevice::UpdatePower(void)
-{
- 	NS_LOG_DEBUG ("Updating harvesting power.");
-
-	if (Simulator::IsFinished ())
-	{
-	  NS_LOG_DEBUG ("Simulation Finished.");
-	  return;
-	}
-	
-	m_energyUpdateEvent.Cancel ();
-	m_energyUpdateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::UpdatePower, this);
-}
-
-void
 LrWpanSensorNetDevice::RfMacEnergyIndication (double energy)
 {
 	NS_LOG_DEBUG ("Received Power: "<<energy);
+
 }
 
 void
 LrWpanSensorNetDevice::RfMacEnergyConsumtion (double energy)
 {
 	NS_LOG_DEBUG ("Consumed Power: "<<energy);
+	//V = E / Q
+	double volt = energy / m_q;
+	NS_LOG_DEBUG ("Voltage: "<<volt);
 }
 
 }//namespace ns3

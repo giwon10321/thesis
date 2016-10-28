@@ -13,13 +13,10 @@ public:
 	LrWpanSensorNetDevice (void);
 	virtual ~LrWpanSensorNetDevice (void);
 
-	void SetResidualEnergy (double energy);
-	double GetResidualEnergy (void) const;
-
 	void RfMacEnergyIndication (double energy);
 	void RfMacEnergyConsumtion (double energy);
 
-	double m_residualEnergy;
+	double m_currentVoltage;
 	double m_minThresholdVoltage;
 
 	double m_minVoltage;
@@ -38,6 +35,10 @@ private:
 
 	Time m_updateInterval;
 	EventId m_energyUpdateEvent;
+
+	double m_q;
+	double m_c;
+	double m_amh;
 };
 
 }//namespace ns3

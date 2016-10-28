@@ -947,6 +947,10 @@ LrWpanMac::SendAckAfterCfe (void)
 
   //need to calculate charging time T
   Time chargingTime = Seconds (60.0);
+
+  double requiredEnergy = 1/2 * 36 * (m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
+  NS_LOG_DEBUG ("required energy: "<<requiredEnergy);
+
   RfMacDurationTag durationTag;
   durationTag.Set (chargingTime);
 
