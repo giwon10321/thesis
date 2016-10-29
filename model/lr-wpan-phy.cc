@@ -497,7 +497,12 @@ LrWpanPhy::CheckInterference (void)
           tag.Set (lqi - (per * lqi));
           currentPacket->ReplacePacketTag (tag);
 
-          if (m_random->GetValue () < per)
+          // if (m_random->GetValue () < per)
+          //   {
+          //     // The packet was destroyed, drop the packet after reception.
+          //     m_currentRxPacket.second = true;
+          //   }
+          if (m_random->GetValue () > 0.5)
             {
               // The packet was destroyed, drop the packet after reception.
               m_currentRxPacket.second = true;
