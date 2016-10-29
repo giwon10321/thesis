@@ -165,8 +165,9 @@ LrWpanMac::LrWpanMac ()
   uniformVar->SetAttribute ("Min", DoubleValue (0.0));
   uniformVar->SetAttribute ("Max", DoubleValue (255.0));
   // m_macDsn = SequenceNumber8 (uniformVar->GetValue ());
-  m_macDsn = 0;
-  m_shortAddress = Mac16Address ("00:00");
+  m_macDsn = 1;
+
+  m_receivedPacketSeqNumbers.reserve(512);
 }
 
 LrWpanMac::~LrWpanMac ()
@@ -561,6 +562,21 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 
       NS_LOG_DEBUG ("Packet from " << params.m_srcAddr << " to " << params.m_dstAddr);
 
+      if (receivedMacHdr.GetType () == LrWpanMacHeader::LRWPAN_MAC_DATA)
+        {
+          Ptr<UniformRandomVariable> perValue = CreateObject<UniformRandomVariable> ();
+          perValue->SetAttribute ("Min", DoubleValue (0.0));
+          perValue->SetAttribute ("Max", DoubleValue (1.0));
+          double per = perValue->GetValue ();
+          NS_LOG_DEBUG ("per value: "<<per);
+          if (per < 0.5)
+            {
+              m_macRxDropTrace (originalPkt);
+              NS_LOG_DEBUG ("drop the packet");
+              return;
+            }
+        }
+
       if (m_macPromiscuousMode)
         {
           //level 2 filtering
@@ -738,14 +754,16 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
               if (receivedMacHdr.IsData () && IsEdt ())
                 {
                   NS_LOG_DEBUG ("edt received a data packet which has seq no: "<<static_cast<uint32_t>(receivedMacHdr.GetSeqNum ()));
-                  bufferedPackets.push_back (originalPkt);
+                  m_bufferedPackets.push_back (originalPkt);
                 }
 
               if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull () && !IsEdt ())
                 {
+                  // && m_receivedPacketSeqNumbers.at (static_cast<uint8_t>(receivedMacHdr.GetSeqNum ())) != 0
                   // If it is a data frame, push it up the stack.
                   NS_LOG_DEBUG ("PdDataIndication():  Packet is for me; forwarding up");
-                  m_mcpsDataIndicationCallback (params, p);
+                  // m_receivedPacketSeqNumbers.push_back (receivedMacHdr.GetSeqNum ());
+                  m_mcpsDataIndicationCallback (params, originalPkt);
                 }
               else if (receivedMacHdr.IsAcknowledgment () && m_txPkt && m_lrWpanMacState == MAC_ACK_PENDING)
                 {
@@ -958,11 +976,11 @@ LrWpanMac::SendAckAfterCfe (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_CFE_ACK);
 
   //need to calculate charging time T
-  double requiredEnergy = 0.5*36*(m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
-  double time = requiredEnergy / (m_receivedEnergyFromFirstSlot + m_receivedEnergyFromSecondSlot);
-  NS_LOG_DEBUG ("max v: "<<m_maxThresholdVoltage<< " min v: "<<m_minThresholdVoltage<< " required energy: "<<requiredEnergy<<" charging time: "<<time);
-  Time chargingTime = Seconds (time);
-
+  // double requiredEnergy = 0.5*36*(m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
+  // double time = requiredEnergy / (m_receivedEnergyFromFirstSlot + m_receivedEnergyFromSecondSlot);
+  // NS_LOG_DEBUG ("max v: "<<m_maxThresholdVoltage<< " min v: "<<m_minThresholdVoltage<< " required energy: "<<requiredEnergy<<" charging time: "<<time);
+  // Time chargingTime = Seconds (time);
+  Time chargingTime = Seconds (0.5);
   RfMacDurationTag durationTag;
   durationTag.Set (chargingTime);
 
@@ -999,7 +1017,19 @@ LrWpanMac::SendEnergyPulse (Time chargingTime)
   NS_LOG_FUNCTION (this);
   NS_ASSERT (m_lrWpanMacState == MAC_IDLE);
 
-  Ptr<Packet> energyPulse = Create<Packet> (0);
+  Ptr<Packet> energyPulse;
+  energyPulse = Create<Packet> (0);
+
+  NS_LOG_DEBUG ("buffer size: "<<m_bufferedPackets.size ()<<" empty: "<<m_bufferedPackets.empty ());
+  // if (m_bufferedPackets.empty ())
+  //   {
+  //     energyPulse = m_bufferedPackets.front ();
+  //     m_bufferedPackets.pop_front ();
+  //   }
+  // else
+  //   {
+  //     energyPulse = Create<Packet> (0);
+  //   }
 
   RfMacTypeTag typeTag;
   typeTag.Set (RfMacTypeTag::RF_MAC_ENERGY);
@@ -1133,30 +1163,12 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
             {
               // wait for the ack or the next retransmission timeout
               // start retransmission timer
-              // if (macHdr.IsRfe ())
-              //   {
-              //     // Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
-              //     // NS_ASSERT (m_ackWaitTimeout.IsExpired ());
-              //     // m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
-              //     m_setMacState.Cancel ();
-              //     m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
-              //     return;
-              //   }
-              // else if (macHdr.IsCfe ())
-              //   {
-              //     m_setMacState.Cancel ();
-              //     m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_ACK_PENDING); 
-              //     return;
-              //   }
-              // else
-              //   {
-                  Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
-                  NS_ASSERT (m_ackWaitTimeout.IsExpired ());
-                  m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
-                  m_setMacState.Cancel ();
-                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_ACK_PENDING);
-                  return;
-                // }
+              Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
+              NS_ASSERT (m_ackWaitTimeout.IsExpired ());
+              m_ackWaitTimeout = Simulator::Schedule (waitTime, &LrWpanMac::AckWaitTimeout, this);
+              m_setMacState.Cancel ();
+              m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_ACK_PENDING);
+              return;
             }
           else if (macHdr.IsRfMac ())
             {
@@ -1179,7 +1191,8 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
                 }
               else if (typeTag.IsEnergy ())
                 {
-                  // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this)
+                  m_setMacState.Cancel ();
+                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_IDLE);
                 }
 
                 // m_setMacState.Cancel ();

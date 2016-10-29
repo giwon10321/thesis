@@ -558,6 +558,8 @@ public:
    */
   void SetMacMaxFrameRetries (uint8_t retries);
 
+  int64_t AssignStreams (int64_t stream);
+
   Time GetSlotTimeOfEnergy (void) const;
 
   Time GetSlotTimeOfData (void) const;
@@ -899,8 +901,8 @@ private:
 
   uint8_t m_groupNumber;
 
-  std::vector<Ptr<Packet> > bufferedPackets;
-  std::vector<Ptr<Packet> > receivedPackets;
+  std::list<Ptr<Packet> > m_bufferedPackets;
+  std::vector<uint8_t> m_receivedPacketSeqNumbers;
 
   Mac16Address m_cfeDstAddress;
   uint16_t m_cfeDstPanId;

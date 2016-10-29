@@ -42,6 +42,7 @@ using namespace ns3;
 static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
 {
   NS_LOG_UNCOND ("Received packet of size " << p->GetSize ());
+  p->Print (std::cout);
 }
 
 static void DataConfirm (McpsDataConfirmParams params)
@@ -118,6 +119,7 @@ int main (int argc, char *argv[])
   McpsDataIndicationCallback cb1;
   cb1 = MakeCallback (&DataIndication);
   dev0->GetMac ()->SetMcpsDataIndicationCallback (cb1);
+  NS_LOG_UNCOND (&cb1);
 
   McpsDataConfirmCallback cb2;
   cb2 = MakeCallback (&DataConfirm);
@@ -126,6 +128,7 @@ int main (int argc, char *argv[])
   McpsDataIndicationCallback cb3;
   cb3 = MakeCallback (&DataIndication);
   dev1->GetMac ()->SetMcpsDataIndicationCallback (cb3);
+  NS_LOG_UNCOND (&cb3);
 
   // Tracing
   lrWpanHelper.EnablePcapAll (std::string ("lr-wpan-data"), true);

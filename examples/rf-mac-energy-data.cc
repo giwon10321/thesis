@@ -36,33 +36,39 @@
 
 #include "ns3/mobility-module.h"
 
+#include <ns3/lr-wpan-mac-header.h>
+
 #include <iostream>
 
 using namespace ns3;
 
-// static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
-// {
-//   // NS_LOG_UNCOND ("Received packet of size " << p->GetSize ());
-//   // p->Print (std::cout);
-// }
+static uint32_t numberOfReceivedPacket = 0;
+static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
+{
+  numberOfReceivedPacket ++;
+  LrWpanMacHeader receivedMacHdr;
+  p->RemoveHeader (receivedMacHdr);
+
+  NS_LOG_UNCOND ("Received packet which has seq number: " << static_cast<uint32_t>(receivedMacHdr.GetSeqNum ()) << " count: "<<numberOfReceivedPacket);
+}
 
 // static void DataConfirm (McpsDataConfirmParams params)
 // {
 //   // NS_LOG_UNCOND ("LrWpanMcpsDataConfirmStatus = " << params.m_status);
 // }
 
-static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnumeration oldState, LrWpanPhyEnumeration newState)
-{
-  NS_LOG_UNCOND (context << " state change at " << now.GetSeconds ()
-                         << " from " << LrWpanHelper::LrWpanPhyEnumerationPrinter (oldState)
-                         << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
-}
+// static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnumeration oldState, LrWpanPhyEnumeration newState)
+// {
+//   NS_LOG_UNCOND (context << " state change at " << now.GetSeconds ()
+//                          << " from " << LrWpanHelper::LrWpanPhyEnumerationPrinter (oldState)
+//                          << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
+// }
 
 int main (int argc, char *argv[])
 {
   bool verbose = false;
-  uint8_t nSensorNode = 3;
-  uint8_t nEnergyNode = 3;
+  uint8_t nSensorNode = 2;
+  uint8_t nEnergyNode = 10;
 
   CommandLine cmd;
 
@@ -84,7 +90,7 @@ int main (int argc, char *argv[])
   // GlobalValue::Bind ("ChecksumEnabled", BooleanValue (true));
 
   Ptr<SingleModelSpectrumChannel> channel = CreateObject<SingleModelSpectrumChannel> ();
-  // Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
+  Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
   // Ptr<FriisPropagationLossModel> propModel = CreateObjectWithAttributes<FriisPropagationLossModel>
   //                                             ("Frequency", DoubleValue (2.4e9),
   //                                               "SystemLoss", DoubleValue (1.0),
@@ -100,7 +106,7 @@ int main (int argc, char *argv[])
   mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
                                 "X", StringValue ("100.0"),
                                 "Y", StringValue ("100.0"),
-                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=2.5]"));
+                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=5.0]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nodes);
 
@@ -111,9 +117,23 @@ int main (int argc, char *argv[])
       Ptr<LrWpanSensorNetDevice> dev = CreateObject<LrWpanSensorNetDevice> ();
       dev->SetAddress (macAddress.Allocate());
       dev->SetChannel (channel);
+      // McpsDataIndicationCallback cb;
+      // cb = MakeCallback (&DataIndication);
+      // dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
+      // NS_LOG_UNCOND (&cb);
+
       nodes.Get (i)->AddDevice (dev);
-      dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i)), MakeCallback (&StateChangeNotification));
+      // dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i)), MakeCallback (&StateChangeNotification));
     }
+
+  McpsDataIndicationCallback cb = MakeCallback (&DataIndication);
+  Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
+
+    // McpsDataIndicationCallback cb2;
+    // cb2 = MakeCallback (&DataIndication);
+    // NS_LOG_UNCOND (&cb2);
+
 
   for(int i = nSensorNode; i<nSensorNode + nEnergyNode; ++i)
     {
@@ -121,32 +141,59 @@ int main (int argc, char *argv[])
       dev->SetAddress (macAddress.Allocate());
       dev->SetChannel (channel);
       nodes.Get (i)->AddDevice (dev);
-      dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i)), MakeCallback (&StateChangeNotification));
+      // dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i)), MakeCallback (&StateChangeNotification));
     }
 
-  lrWpanHelper.EnablePcapAll (std::string ("rf-mac-energy-data"), true);
-  AsciiTraceHelper ascii;
-  Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream ("rf-mac-energy-data.tr");
-  lrWpanHelper.EnableAsciiAll (stream);
+  // lrWpanHelper.EnablePcapAll (std::string ("rf-mac-energy-data"), true);
+  // AsciiTraceHelper ascii;
+  // Ptr<OutputStreamWrapper> stream = ascii.CreateFileStream ("rf-mac-energy-data.tr");
+  // lrWpanHelper.EnableAsciiAll (stream);
 
-  Ptr<Packet> p0 = Create<Packet> (50);  // 50 bytes of dummy data
-  McpsDataRequestParams params;
-  params.m_srcAddrMode = SHORT_ADDR;
-  params.m_dstAddrMode = SHORT_ADDR;
-  params.m_dstPanId = 0;
-  params.m_dstAddr = Mac16Address (std::string("00:01").c_str ());
-  params.m_msduHandle = 0;
-  params.m_txOptions = TX_OPTION_ACK;
+
 
   // Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
   // Simulator::ScheduleWithContext (1, Seconds(1.0),
-  //                               &LrWpanMac::SendRfeForEnergy,
-  //                                dev->GetMac ());
-  Simulator::ScheduleWithContext (2, Seconds(1.0),
-                                &LrWpanMac::McpsDataRequest,
-                                dev2->GetMac(), params, p0);
-  Simulator::Stop (Seconds (1000.0));
+  //                                 &LrWpanMac::SendRfeForEnergy,
+  //                                 dev2->GetMac ());  
+  for (int i=1; i<200; i++)
+    {
+      if(i % 2 == 1)
+        {
+          Ptr<Packet> p = Create<Packet> (60);
+          McpsDataRequestParams params;
+          params.m_srcAddrMode = SHORT_ADDR;
+          params.m_dstAddrMode = SHORT_ADDR;
+          params.m_dstPanId = 0;
+          params.m_dstAddr = Mac16Address (std::string("00:02").c_str ());
+          params.m_msduHandle = 0;
+          params.m_txOptions = TX_OPTION_NONE;
+          Simulator::ScheduleWithContext (i, Seconds(i),
+                                    &LrWpanMac::McpsDataRequest,
+                                    dev2->GetMac(), params, p);
+        }
+      else
+        {
+          Simulator::ScheduleWithContext (i, Seconds(i),
+                                    &LrWpanMac::SendRfeForEnergy,
+                                    dev->GetMac ());
+        }
+    }
+  // for (int i=0; i<100; i++)
+  //   {
+  //     Ptr<Packet> p = Create<Packet> (60);
+  //     McpsDataRequestParams params;
+  //     params.m_srcAddrMode = SHORT_ADDR;
+  //     params.m_dstAddrMode = SHORT_ADDR;
+  //     params.m_dstPanId = 0;
+  //     params.m_dstAddr = Mac16Address (std::string("00:02").c_str ());
+  //     params.m_msduHandle = 0;
+  //     params.m_txOptions = TX_OPTION_NONE;
+  //     Simulator::ScheduleWithContext (i, Seconds(i),
+  //                               &LrWpanMac::McpsDataRequest,
+  //                               dev2->GetMac(), params, p);      
+  //   }
+  Simulator::Stop (Seconds (10000.0));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
