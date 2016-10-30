@@ -561,6 +561,21 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 
       NS_LOG_DEBUG ("Packet from " << params.m_srcAddr << " to " << params.m_dstAddr);
 
+      if (receivedMacHdr.GetType () == LrWpanMacHeader::LRWPAN_MAC_DATA)
+        {
+          Ptr<UniformRandomVariable> perValue = CreateObject<UniformRandomVariable> ();
+          perValue->SetAttribute ("Min", DoubleValue (0.0));
+          perValue->SetAttribute ("Max", DoubleValue (1.0));
+          double per = perValue->GetValue ();
+          NS_LOG_DEBUG ("per value: "<<per);
+          if (per < 0.75)
+            {
+              m_macRxDropTrace (originalPkt);
+              NS_LOG_DEBUG ("drop the packet");
+              return;
+            }
+        }
+
       if (m_macPromiscuousMode)
         {
           //level 2 filtering
