@@ -569,7 +569,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
           perValue->SetAttribute ("Max", DoubleValue (1.0));
           double per = perValue->GetValue ();
           NS_LOG_DEBUG ("per value: "<<per);
-          if (per < 0.5)
+          if (per < 0.75)
             {
               m_macRxDropTrace (originalPkt);
               NS_LOG_DEBUG ("drop the packet");
@@ -757,12 +757,11 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   m_bufferedPackets.push_back (originalPkt);
                 }
 
-              if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull () && !IsEdt ())
+              if (receivedMacHdr.IsData () && !m_mcpsDataIndicationCallback.IsNull () && !IsEdt () && m_receivedPacketSeqNumbers[static_cast<uint8_t>(receivedMacHdr.GetSeqNum ())] == 0)
                 {
-                  // && m_receivedPacketSeqNumbers.at (static_cast<uint8_t>(receivedMacHdr.GetSeqNum ())) != 0
                   // If it is a data frame, push it up the stack.
                   NS_LOG_DEBUG ("PdDataIndication():  Packet is for me; forwarding up");
-                  // m_receivedPacketSeqNumbers.push_back (receivedMacHdr.GetSeqNum ());
+                  m_receivedPacketSeqNumbers[static_cast<uint8_t>(receivedMacHdr.GetSeqNum ())] = 1;
                   m_mcpsDataIndicationCallback (params, originalPkt);
                 }
               else if (receivedMacHdr.IsAcknowledgment () && m_txPkt && m_lrWpanMacState == MAC_ACK_PENDING)
@@ -1021,42 +1020,46 @@ LrWpanMac::SendEnergyPulse (Time chargingTime)
   energyPulse = Create<Packet> (0);
 
   NS_LOG_DEBUG ("buffer size: "<<m_bufferedPackets.size ()<<" empty: "<<m_bufferedPackets.empty ());
-  // if (m_bufferedPackets.empty ())
-  //   {
-  //     energyPulse = m_bufferedPackets.front ();
-  //     m_bufferedPackets.pop_front ();
-  //   }
-  // else
-  //   {
-  //     energyPulse = Create<Packet> (0);
-  //   }
+  if (!m_bufferedPackets.empty ())
+    {
+      energyPulse = m_bufferedPackets.front ();
+      m_bufferedPackets.pop_front ();
+
+      RfMacTypeTag removedTypeTag;
+      energyPulse->RemovePacketTag (removedTypeTag);
+
+      RfMacDurationTag removedDurationTag;
+      energyPulse->RemovePacketTag (removedDurationTag);
+    }
+  else
+    {
+      energyPulse = Create<Packet> (0);
+      LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RF_MAC, 0);
+      macHdr.SetSrcAddrMode (SHORT_ADDR);
+      macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
+      macHdr.SetDstAddrMode (SHORT_ADDR);
+      macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
+
+      energyPulse->AddHeader (macHdr);
+
+      LrWpanMacTrailer macTrailer;
+      // Calculate FCS if the global attribute ChecksumEnable is set.
+      if (Node::ChecksumEnabled ())
+        {
+          macTrailer.EnableFcs (true);
+          macTrailer.SetFcs (energyPulse);
+        }
+
+      energyPulse->AddTrailer (macTrailer);
+    }
 
   RfMacTypeTag typeTag;
   typeTag.Set (RfMacTypeTag::RF_MAC_ENERGY);
+  energyPulse->AddPacketTag (typeTag);
 
   RfMacDurationTag durationTag;
   durationTag.Set (chargingTime);
-
-  energyPulse->AddPacketTag (typeTag);
   energyPulse->AddPacketTag (durationTag);
-
-  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_RF_MAC, 0);
-  macHdr.SetSrcAddrMode (SHORT_ADDR);
-  macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
-  macHdr.SetDstAddrMode (SHORT_ADDR);
-  macHdr.SetDstAddrFields (0, Mac16Address("ff:ff"));
-
-  energyPulse->AddHeader (macHdr);
-
-  LrWpanMacTrailer macTrailer;
-  // Calculate FCS if the global attribute ChecksumEnable is set.
-  if (Node::ChecksumEnabled ())
-    {
-      macTrailer.EnableFcs (true);
-      macTrailer.SetFcs (energyPulse);
-    }
-
-  energyPulse->AddTrailer (macTrailer);
 
   m_txPkt = energyPulse;
 
@@ -1157,6 +1160,9 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
     {
       if (!macHdr.IsAcknowledgment ())
         {
+          RfMacTypeTag typeTag;
+          m_txPkt->PeekPacketTag (typeTag);
+          NS_LOG_DEBUG ("type tag: "<<typeTag.Get ());
           // We have just send a regular data packet, check if we have to wait
           // for an ACK.
           if (macHdr.IsAckReq ())
@@ -1170,11 +1176,8 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
               m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_ACK_PENDING);
               return;
             }
-          else if (macHdr.IsRfMac ())
+          else if (macHdr.IsRfMac () || (macHdr.IsData () && typeTag.IsEnergy ()))
             {
-              RfMacTypeTag typeTag;
-              m_txPkt->PeekPacketTag (typeTag);
-
               m_setMacState.Cancel ();
 
               if (typeTag.IsRfe ())
@@ -1191,12 +1194,9 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
                 }
               else if (typeTag.IsEnergy ())
                 {
-                  m_setMacState.Cancel ();
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_IDLE);
                 }
 
-                // m_setMacState.Cancel ();
-                // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_IDLE);
                 return;
             }
           else

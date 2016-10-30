@@ -103,15 +103,15 @@ LrWpanHelper::EnableLogComponents (void)
 {
   LogComponentEnableAll (LOG_PREFIX_TIME);
   LogComponentEnableAll (LOG_PREFIX_FUNC);
-  // LogComponentEnable ("LrWpanCsmaCa", LOG_LEVEL_ALL);
-  // LogComponentEnable ("LrWpanErrorModel", LOG_LEVEL_ALL);
-  // LogComponentEnable ("LrWpanInterferenceHelper", LOG_LEVEL_ALL);
+  LogComponentEnable ("LrWpanCsmaCa", LOG_LEVEL_ALL);
+  LogComponentEnable ("LrWpanErrorModel", LOG_LEVEL_ALL);
+  LogComponentEnable ("LrWpanInterferenceHelper", LOG_LEVEL_ALL);
   LogComponentEnable ("LrWpanMac", LOG_LEVEL_ALL);
-  // LogComponentEnable ("LrWpanNetDevice", LOG_LEVEL_ALL);
+  LogComponentEnable ("LrWpanNetDevice", LOG_LEVEL_ALL);
   LogComponentEnable ("LrWpanPhy", LOG_LEVEL_ALL);
-  // LogComponentEnable ("LrWpanSpectrumSignalParameters", LOG_LEVEL_ALL);
-  // LogComponentEnable ("LrWpanSpectrumValueHelper", LOG_LEVEL_ALL);
-  // LogComponentEnable ("SingleModelSpectrumChannel", LOG_LEVEL_ALL);
+  LogComponentEnable ("LrWpanSpectrumSignalParameters", LOG_LEVEL_ALL);
+  LogComponentEnable ("LrWpanSpectrumValueHelper", LOG_LEVEL_ALL);
+  LogComponentEnable ("SingleModelSpectrumChannel", LOG_LEVEL_ALL);
   LogComponentEnable ("LrWpanSensorNetDevice", LOG_LEVEL_ALL);
 }
 
