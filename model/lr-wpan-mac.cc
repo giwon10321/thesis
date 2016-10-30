@@ -164,7 +164,8 @@ LrWpanMac::LrWpanMac ()
   Ptr<UniformRandomVariable> uniformVar = CreateObject<UniformRandomVariable> ();
   uniformVar->SetAttribute ("Min", DoubleValue (0.0));
   uniformVar->SetAttribute ("Max", DoubleValue (255.0));
-  m_macDsn = SequenceNumber8 (uniformVar->GetValue ());
+  // m_macDsn = SequenceNumber8 (uniformVar->GetValue ());
+  m_macDsn = 1;
   m_shortAddress = Mac16Address ("00:00");
 }
 
@@ -1167,11 +1168,8 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
                 }
               else if (typeTag.IsEnergy ())
                 {
-                  // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this)
+                  m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_IDLE);
                 }
-
-                // m_setMacState.Cancel ();
-                // m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_IDLE);
                 return;
             }
           else
