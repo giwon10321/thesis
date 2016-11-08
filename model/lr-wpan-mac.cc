@@ -566,7 +566,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
         {
           double per = perValue->GetValue ();
           NS_LOG_DEBUG ("per value: "<<per);
-          if (per < 0.9)
+          if (per < 0.0)
             {
               m_macRxDropTrace (originalPkt);
               NS_LOG_DEBUG ("drop the packet");
@@ -972,6 +972,7 @@ LrWpanMac::SendAckAfterCfe (void)
   double requiredEnergy = 0.5 * 36 * (m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
   double time = requiredEnergy * 2 * m_slotTimeOfEnergy.GetSeconds () / (m_receivedEnergyFromFirstSlot + m_receivedEnergyFromSecondSlot);
   NS_LOG_DEBUG ("max v: "<<m_maxThresholdVoltage<< " min v: "<<m_minThresholdVoltage<< " required energy: "<<requiredEnergy<<" rx_energy: "<<m_receivedEnergyFromFirstSlot+m_receivedEnergyFromSecondSlot<<" charging time: "<<time <<" slot: "<<m_slotTimeOfEnergy.GetSeconds ());
+  NS_LOG_DEBUG ("m_rx: "<<m_rx<<" m_tx: "<<m_tx);
   // Time chargingTime = Seconds (time);
   Time chargingTime = Seconds (time);
   RfMacDurationTag durationTag;

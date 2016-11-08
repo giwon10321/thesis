@@ -50,7 +50,7 @@ static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
   LrWpanMacHeader receivedMacHdr;
   p->RemoveHeader (receivedMacHdr);
 
-  NS_LOG_UNCOND ("Received packet which has seq number: " << static_cast<uint32_t>(receivedMacHdr.GetSeqNum ()) << " count: "<<numberOfReceivedPacket);
+  NS_LOG_UNCOND ("[Address: "<< receivedMacHdr.GetShortDstAddr ()<<"] Received packet which has seq number: " << static_cast<uint32_t>(receivedMacHdr.GetSeqNum ()) << " count: "<<numberOfReceivedPacket);
 }
 
 // static void DataConfirm (McpsDataConfirmParams params)
@@ -114,24 +114,19 @@ int main (int argc, char *argv[])
   mobility.Install (nodes);
 
   Mac16Address macAddress = Mac16Address ();
-
+  
   for(int i=0; i<nSensorNode; ++i)
     {
       Ptr<LrWpanSensorNetDevice> dev = CreateObject<LrWpanSensorNetDevice> ();
       dev->SetAddress (macAddress.Allocate());
       dev->SetChannel (channel);
-      // McpsDataIndicationCallback cb;
-      // cb = MakeCallback (&DataIndication);
-      // dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
-      // NS_LOG_UNCOND (&cb);
-
       nodes.Get (i)->AddDevice (dev);
       // dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i)), MakeCallback (&StateChangeNotification));
-    }
 
-  McpsDataIndicationCallback cb = MakeCallback (&DataIndication);
-  Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
+      McpsDataIndicationCallback cb;
+      cb = MakeCallback (&DataIndication);
+      dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
+    }
 
     // McpsDataIndicationCallback cb2;
     // cb2 = MakeCallback (&DataIndication);
@@ -153,35 +148,37 @@ int main (int argc, char *argv[])
   // lrWpanHelper.EnableAsciiAll (stream);
 
 
-
+  Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  // McpsDataIndicationCallback cb = MakeCallback (&DataIndication);
+  // dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
   // Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Simulator::ScheduleWithContext (1, Seconds(1.0),
-                                  &LrWpanMac::SendRfeForEnergy,
-                                  dev2->GetMac ());
-  // for (int i=1; i<400; i++)
-  //   {
-  //     if(i % 2 == 1)
-  //       {
-  //         Ptr<Packet> p = Create<Packet> (60);
-  //         McpsDataRequestParams params;
-  //         params.m_srcAddrMode = SHORT_ADDR;
-  //         params.m_dstAddrMode = SHORT_ADDR;
-  //         params.m_dstPanId = 0;
-  //         params.m_dstAddr = Mac16Address (std::string("00:02").c_str ());
-  //         params.m_msduHandle = 0;
-  //         params.m_txOptions = TX_OPTION_NONE;
-  //         Simulator::ScheduleWithContext (i, Seconds(i),
-  //                                   &LrWpanMac::McpsDataRequest,
-  //                                   dev2->GetMac(), params, p);
-  //       }
-  //     else
-  //       {
-  //         Simulator::ScheduleWithContext (i, Seconds(i),
-  //                                   &LrWpanMac::SendRfeForEnergy,
-  //                                   dev->GetMac ());
-  //       }
-  //   }
+  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  // Simulator::ScheduleWithContext (1, Seconds(1.0),
+  //                                 &LrWpanMac::SendRfeForEnergy,
+  //                                 dev2->GetMac ());
+  for (int i=1; i<10; i++)
+    {
+      if(i % 2 == 1)
+        {
+          Ptr<Packet> p = Create<Packet> (60);
+          McpsDataRequestParams params;
+          params.m_srcAddrMode = SHORT_ADDR;
+          params.m_dstAddrMode = SHORT_ADDR;
+          params.m_dstPanId = 0;
+          params.m_dstAddr = Mac16Address (std::string("00:01").c_str ());
+          params.m_msduHandle = 0;
+          params.m_txOptions = TX_OPTION_NONE;
+          Simulator::ScheduleWithContext (i, Seconds(i),
+                                    &LrWpanMac::McpsDataRequest,
+                                    dev2->GetMac(), params, p);
+        }
+      else
+        {
+          Simulator::ScheduleWithContext (i, Seconds(i),
+                                    &LrWpanMac::SendRfeForEnergy,
+                                    dev->GetMac ());
+        }
+    }
   // for (int i=0; i<100; i++)
   //   {
   //     Ptr<Packet> p = Create<Packet> (60);
