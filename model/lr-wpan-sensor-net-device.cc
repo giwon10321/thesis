@@ -35,6 +35,7 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	: LrWpanNetDevice ()
 {
 	NS_LOG_FUNCTION (this);
+	m_updateInterval = Seconds (0.1);
 	m_minThresholdVoltage = 2.7;
 	m_minVoltage = 2.0;
 	m_maxVoltage = 3.0;
@@ -51,8 +52,8 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	GetMac ()->m_maxVoltage = m_maxVoltage;
  	GetMac ()->m_currentVoltage = m_maxVoltage;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
-	GetMac ()->SetRfMacEnergyIndicationCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyIndication, this));
 
+	GetMac ()->SetRfMacEnergyIndicationCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyIndication, this));
 	GetPhy ()->SetRfMacEnergyConsumtionCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyConsumtion, this));
 }
 
@@ -65,7 +66,7 @@ void
 LrWpanSensorNetDevice::DoDispose (void)
 {
 	NS_LOG_FUNCTION (this);
-	m_energyUpdateEvent.Cancel ();
+	m_updateEvent.Cancel ();
 	LrWpanNetDevice::DoDispose ();
 }
 
@@ -73,6 +74,7 @@ void
 LrWpanSensorNetDevice::DoInitialize (void)
 {
 	NS_LOG_FUNCTION (this);
+	Simulator::ScheduleNow (&LrWpanSensorNetDevice::Update, this);
 	LrWpanNetDevice::DoInitialize ();
 }
 
@@ -94,6 +96,7 @@ LrWpanSensorNetDevice::RfMacEnergyIndication (double energy)
 			m_currentVoltage = m_maxVoltage;	
 		}
 	GetMac ()->m_currentVoltage = m_currentVoltage;
+	// m_updateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::Update, this);
 }
 
 void
@@ -105,9 +108,32 @@ LrWpanSensorNetDevice::RfMacEnergyConsumtion (double energy)
 	NS_LOG_DEBUG ("Voltage: "<<volt);
 	m_currentVoltage -= volt;
 	GetMac ()->m_currentVoltage = m_currentVoltage;
-	if (m_currentVoltage <= m_minThresholdVoltage)
+	// this->CheckVoltage ();
+}
+
+void
+LrWpanSensorNetDevice::Update (void)
+{
+	// NS_LOG_FUNCTION (this);
+	m_updateEvent.Cancel ();
+	if (Simulator::IsFinished ())
 		{
-			this->SendRfe ();			
+			NS_LOG_DEBUG ("Simulation Finished");
+			return ;
+		}
+	// m_currentVoltage -= 0.1;
+	// this->CheckVoltage ();
+	// m_updateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::Update, this);
+}
+
+void
+LrWpanSensorNetDevice::CheckVoltage (void)
+{
+	if(m_currentVoltage <= m_minThresholdVoltage)
+		{
+			m_updateEvent.Cancel ();
+			this->SendRfe ();
+			return ;
 		}
 }
 

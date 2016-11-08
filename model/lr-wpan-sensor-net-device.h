@@ -28,13 +28,14 @@ protected:
 private:
 
 	void SendRfe (void);
-	void UpdatePower (void);
+	void Update (void);
+	void CheckVoltage (void);
 
 	TracedValue<double> m_harvestedPower;
 	TracedValue<double> m_totalEnergyHarvestedJ;
 
 	Time m_updateInterval;
-	EventId m_energyUpdateEvent;
+	EventId m_updateEvent;
 
 	double m_q;
 	double m_c;

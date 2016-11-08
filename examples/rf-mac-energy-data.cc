@@ -69,7 +69,7 @@ int main (int argc, char *argv[])
 {
   bool verbose = false;
   uint8_t nSensorNode = 2;
-  uint8_t nEnergyNode = 10;
+  uint8_t nEnergyNode = 1;
 
   CommandLine cmd;
 
@@ -148,14 +148,14 @@ int main (int argc, char *argv[])
   // lrWpanHelper.EnableAsciiAll (stream);
 
 
-  Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
   // McpsDataIndicationCallback cb = MakeCallback (&DataIndication);
   // dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
   // Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  // Simulator::ScheduleWithContext (1, Seconds(1.0),
-  //                                 &LrWpanMac::SendRfeForEnergy,
-  //                                 dev2->GetMac ());
+  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  Simulator::ScheduleWithContext (1, Seconds(1.0),
+                                  &LrWpanMac::SendRfeForEnergy,
+                                  dev2->GetMac ());
   for (int i=1; i<10; i++)
     {
       if(i % 2 == 1)
@@ -165,7 +165,7 @@ int main (int argc, char *argv[])
           params.m_srcAddrMode = SHORT_ADDR;
           params.m_dstAddrMode = SHORT_ADDR;
           params.m_dstPanId = 0;
-          params.m_dstAddr = Mac16Address (std::string("00:01").c_str ());
+          params.m_dstAddr = dev->GetMac ()->GetShortAddress ();
           params.m_msduHandle = 0;
           params.m_txOptions = TX_OPTION_NONE;
           Simulator::ScheduleWithContext (i, Seconds(i),
@@ -193,7 +193,7 @@ int main (int argc, char *argv[])
   //                               &LrWpanMac::McpsDataRequest,
   //                               dev2->GetMac(), params, p);      
   //   }
-  Simulator::Stop (Seconds (10000.0));
+  Simulator::Stop (Seconds (100.0));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
