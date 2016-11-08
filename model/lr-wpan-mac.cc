@@ -51,6 +51,7 @@ NS_LOG_COMPONENT_DEFINE ("LrWpanMac");
 NS_OBJECT_ENSURE_REGISTERED (LrWpanMac);
 
 const uint32_t LrWpanMac::aMinMPDUOverhead = 9; // Table 85
+Ptr<UniformRandomVariable> perValue;
 
 TypeId
 LrWpanMac::GetTypeId (void)
@@ -161,10 +162,9 @@ LrWpanMac::LrWpanMac ()
   m_receivedEnergyFromFirstSlot = 0.0;
   m_receivedEnergyFromSecondSlot = 0.0;
 
-  Ptr<UniformRandomVariable> uniformVar = CreateObject<UniformRandomVariable> ();
-  uniformVar->SetAttribute ("Min", DoubleValue (0.0));
-  uniformVar->SetAttribute ("Max", DoubleValue (255.0));
-  // m_macDsn = SequenceNumber8 (uniformVar->GetValue ());
+  perValue = CreateObject<UniformRandomVariable> ();
+  perValue->SetAttribute ("Min", DoubleValue (0.0));
+  perValue->SetAttribute ("Max", DoubleValue (1.0));
   m_macDsn = 1;
 
   m_receivedPacketSeqNumbers.reserve(512);
@@ -564,12 +564,9 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 
       if (receivedMacHdr.GetType () == LrWpanMacHeader::LRWPAN_MAC_DATA)
         {
-          Ptr<UniformRandomVariable> perValue = CreateObject<UniformRandomVariable> ();
-          perValue->SetAttribute ("Min", DoubleValue (0.0));
-          perValue->SetAttribute ("Max", DoubleValue (1.0));
           double per = perValue->GetValue ();
           NS_LOG_DEBUG ("per value: "<<per);
-          if (per < 0.75)
+          if (per < 0.9)
             {
               m_macRxDropTrace (originalPkt);
               NS_LOG_DEBUG ("drop the packet");
@@ -762,6 +759,7 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
                   // If it is a data frame, push it up the stack.
                   NS_LOG_DEBUG ("PdDataIndication():  Packet is for me; forwarding up");
                   m_receivedPacketSeqNumbers[static_cast<uint8_t>(receivedMacHdr.GetSeqNum ())] = 1;
+                  m_rx++;
                   m_mcpsDataIndicationCallback (params, originalPkt);
                 }
               else if (receivedMacHdr.IsAcknowledgment () && m_txPkt && m_lrWpanMacState == MAC_ACK_PENDING)
@@ -839,13 +837,9 @@ LrWpanMac::PdEnergyIndication (double energy, uint8_t slotNumber)
   if (slotNumber == 0 && m_lrWpanMacState == MAC_ENERGY_PENDING)
   {
     // check whether this device send the rfe packet or not.
-    if (GetShortAddress () == m_cfeDstAddress)
+    if (GetShortAddress () != m_cfeDstAddress)
       {
-
-      }
-    else
-      {
-
+        energy = energy * 0.5;
       }
 
     if (!m_rfMacEnergyIndicationCallback.IsNull ())
@@ -975,11 +969,11 @@ LrWpanMac::SendAckAfterCfe (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_CFE_ACK);
 
   //need to calculate charging time T
-  // double requiredEnergy = 0.5*36*(m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
-  // double time = requiredEnergy / (m_receivedEnergyFromFirstSlot + m_receivedEnergyFromSecondSlot);
-  // NS_LOG_DEBUG ("max v: "<<m_maxThresholdVoltage<< " min v: "<<m_minThresholdVoltage<< " required energy: "<<requiredEnergy<<" charging time: "<<time);
+  double requiredEnergy = 0.5 * 36 * (m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
+  double time = requiredEnergy * 2 * m_slotTimeOfEnergy.GetSeconds () / (m_receivedEnergyFromFirstSlot + m_receivedEnergyFromSecondSlot);
+  NS_LOG_DEBUG ("max v: "<<m_maxThresholdVoltage<< " min v: "<<m_minThresholdVoltage<< " required energy: "<<requiredEnergy<<" rx_energy: "<<m_receivedEnergyFromFirstSlot+m_receivedEnergyFromSecondSlot<<" charging time: "<<time <<" slot: "<<m_slotTimeOfEnergy.GetSeconds ());
   // Time chargingTime = Seconds (time);
-  Time chargingTime = Seconds (0.5);
+  Time chargingTime = Seconds (time);
   RfMacDurationTag durationTag;
   durationTag.Set (chargingTime);
 
@@ -1167,6 +1161,7 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
           // for an ACK.
           if (macHdr.IsAckReq ())
             {
+              m_tx++;
               // wait for the ack or the next retransmission timeout
               // start retransmission timer
               Time waitTime = MicroSeconds (GetMacAckWaitDuration () * 1000 * 1000 / m_phy->GetDataOrSymbolRate (false));
@@ -1201,6 +1196,7 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
             }
           else
             {
+              m_tx++;
               m_macTxOkTrace (m_txPkt);
               // remove the copy of the packet that was just sent
               if (!m_mcpsDataConfirmCallback.IsNull ())

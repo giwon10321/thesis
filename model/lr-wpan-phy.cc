@@ -397,7 +397,7 @@ LrWpanPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
       else if(m_firstEnergySlot.IsRunning () || m_secondEnergySlot.IsRunning ())
         {
           NS_LOG_DEBUG (this << " watt: "<< watt);
-          m_receivedEnergy += watt;  
+          m_receivedEnergy += watt * 1e-5;  
         }
       // Std. 802.15.4-2006, appendix E, Figure E.2
       // At SNR < -5 the BER is less than 10e-1.

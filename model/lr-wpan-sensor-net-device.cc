@@ -35,11 +35,11 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
 	: LrWpanNetDevice ()
 {
 	NS_LOG_FUNCTION (this);
-	m_minThresholdVoltage = 2.3;
+	m_minThresholdVoltage = 2.7;
 	m_minVoltage = 2.0;
 	m_maxVoltage = 3.0;
 
-	m_currentVoltage = m_maxVoltage;
+	m_currentVoltage = 2.9;
 
 	m_amh = 0.03;
 	m_q = m_amh * 3600;
@@ -85,17 +85,30 @@ LrWpanSensorNetDevice::SendRfe (void)
 void
 LrWpanSensorNetDevice::RfMacEnergyIndication (double energy)
 {
-	NS_LOG_DEBUG ("Received Power: "<<energy);
-
+	NS_LOG_DEBUG ("Received energy: "<<energy);
+	double volt = energy / m_q;
+	NS_LOG_DEBUG ("Voltage: "<<volt);
+	m_currentVoltage += volt;
+	if(m_currentVoltage > m_maxVoltage)
+		{
+			m_currentVoltage = m_maxVoltage;	
+		}
+	GetMac ()->m_currentVoltage = m_currentVoltage;
 }
 
 void
 LrWpanSensorNetDevice::RfMacEnergyConsumtion (double energy)
 {
-	NS_LOG_DEBUG ("Consumed Power: "<<energy);
+	NS_LOG_DEBUG ("Consumed energy: "<<energy);
 	//V = E / Q
 	double volt = energy / m_q;
 	NS_LOG_DEBUG ("Voltage: "<<volt);
+	m_currentVoltage -= volt;
+	GetMac ()->m_currentVoltage = m_currentVoltage;
+	if (m_currentVoltage <= m_minThresholdVoltage)
+		{
+			this->SendRfe ();			
+		}
 }
 
 }//namespace ns3

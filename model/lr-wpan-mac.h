@@ -909,6 +909,13 @@ private:
 
   Mac16Address m_rfeSrcAddress;
   uint16_t m_rfeSrcPanId;
+
+  uint32_t m_rx;
+  uint32_t m_tx;
+
+  // EventId m_busyTimeEvent;
+  Time m_busyTime;
+  Time m_lastUpdatedTime;
 };
 
 } // namespace ns3
