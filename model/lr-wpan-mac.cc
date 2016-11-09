@@ -564,14 +564,14 @@ LrWpanMac::PdDataIndication (uint32_t psduLength, Ptr<Packet> p, uint8_t lqi)
 
       if (receivedMacHdr.GetType () == LrWpanMacHeader::LRWPAN_MAC_DATA)
         {
-          double per = perValue->GetValue ();
-          NS_LOG_DEBUG ("per value: "<<per);
-          if (per < 0.0)
-            {
-              m_macRxDropTrace (originalPkt);
-              NS_LOG_DEBUG ("drop the packet");
-              return;
-            }
+          // double per = perValue->GetValue ();
+          // NS_LOG_DEBUG ("per value: "<<per);
+          // if (per < 0.0)
+          //   {
+          //     m_macRxDropTrace (originalPkt);
+          //     NS_LOG_DEBUG ("drop the packet");
+          //     return;
+          //   }
         }
 
       if (m_macPromiscuousMode)
@@ -1509,6 +1509,45 @@ bool
 LrWpanMac::IsEdt (void)
 {
   return (m_deviceType == MAC_FOR_EDT);
+}
+
+void
+LrWpanMac::PushPacketToQueue (Mac16Address dstAddr)
+{
+  NS_LOG_FUNCTION (this);
+  
+  Ptr<Packet> p = Create<Packet> (0);
+
+  RfMacTypeTag typeTag;
+  typeTag.Set (RfMacTypeTag::RF_MAC_DATA);
+
+  p->AddPacketTag (typeTag);
+
+  LrWpanMacHeader macHdr (LrWpanMacHeader::LRWPAN_MAC_DATA, m_macDsn.GetValue ());
+  macHdr.SetSrcAddrMode (SHORT_ADDR);
+  macHdr.SetSrcAddrFields (GetPanId (), GetShortAddress ());
+  macHdr.SetDstAddrMode (SHORT_ADDR);
+  macHdr.SetDstAddrFields (0, dstAddr);
+  macHdr.SetNoAckReq ();
+
+  m_macDsn++;
+
+  p->AddHeader (macHdr);
+
+  LrWpanMacTrailer macTrailer;
+  
+  if (Node::ChecksumEnabled ())
+    {
+      macTrailer.EnableFcs (true);
+      macTrailer.SetFcs (p);
+    }
+  p->AddTrailer (macTrailer);
+
+  TxQueueElement *txQElement = new TxQueueElement;
+  txQElement->txQMsduHandle = 0;
+  txQElement->txQPkt = p;
+  m_txQueue.push_back (txQElement);
+
 }
 
 } // namespace ns3

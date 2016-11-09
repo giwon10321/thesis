@@ -11,6 +11,7 @@ public:
 	static TypeId GetTypeId (void);
 
 	LrWpanEdtNetDevice (void);
+	LrWpanEdtNetDevice (bool isProposed);
 	virtual ~LrWpanEdtNetDevice (void);
 
 private:

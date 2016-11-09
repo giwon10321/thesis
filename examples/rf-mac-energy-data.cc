@@ -68,14 +68,16 @@ static void DataIndication (McpsDataIndicationParams params, Ptr<Packet> p)
 int main (int argc, char *argv[])
 {
   bool verbose = false;
-  uint8_t nSensorNode = 2;
-  uint8_t nEnergyNode = 1;
+  bool proposed = false;
+  uint32_t nSensorNode = 2;
+  uint32_t nEnergyNode = 1;
 
   CommandLine cmd;
 
   cmd.AddValue ("verbose", "turn on all log components", verbose);
-  // cmd.AddValue ("nEnergyNode", "the number of energy nodes", nEnergyNode);
-  // cmd.AddValue ("nSensorNode", "the number of sensor nodes", nSensorNode);
+  cmd.AddValue ("proposed", "for proposed", proposed);
+  cmd.AddValue ("nEnergyNode", "the number of energy nodes", nEnergyNode);
+  cmd.AddValue ("nSensorNode", "the number of sensor nodes", nSensorNode);
 
   cmd.Parse (argc, argv);
 
@@ -90,7 +92,7 @@ int main (int argc, char *argv[])
   // Enable calculation of FCS in the trailers. Only necessary when interacting with real devices or wireshark.
   // GlobalValue::Bind ("ChecksumEnabled", BooleanValue (true));
 
-  RngSeedManager::SetSeed (17);
+  RngSeedManager::SetSeed (1);
 
   Ptr<SingleModelSpectrumChannel> channel = CreateObject<SingleModelSpectrumChannel> ();
   Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
@@ -109,7 +111,7 @@ int main (int argc, char *argv[])
   mobility.SetPositionAllocator("ns3::RandomDiscPositionAllocator",
                                 "X", StringValue ("100.0"),
                                 "Y", StringValue ("100.0"),
-                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=10.0]"));
+                                "Rho", StringValue ("ns3::UniformRandomVariable[Min=0|Max=25.0]"));
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (nodes);
 
@@ -135,11 +137,30 @@ int main (int argc, char *argv[])
 
   for(int i = nSensorNode; i<nSensorNode + nEnergyNode; ++i)
     {
-      Ptr<LrWpanEdtNetDevice> dev = CreateObject<LrWpanEdtNetDevice> ();
+      Ptr<LrWpanEdtNetDevice> dev = CreateObject<LrWpanEdtNetDevice> (proposed);
       dev->SetAddress (macAddress.Allocate());
       dev->SetChannel (channel);
       nodes.Get (i)->AddDevice (dev);
       // dev->GetPhy ()->TraceConnect ("TrxState", std::string ("phy"+std::to_string (i)), MakeCallback (&StateChangeNotification));
+    }
+
+  Ptr<UniformRandomVariable> randomNumber = CreateObject<UniformRandomVariable> ();
+  randomNumber->SetAttribute ("Min", DoubleValue (0.0));
+  randomNumber->SetAttribute ("Max", DoubleValue (nSensorNode - 1));
+
+  for (int i=0; i<nSensorNode; ++i)
+    {
+      Ptr<LrWpanSensorNetDevice> dev (nodes.Get (i)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ());
+      for (int j=0; j<500; ++j)
+        {
+          uint32_t index = randomNumber->GetInteger ();
+          Ptr<LrWpanSensorNetDevice> dst (nodes.Get (index)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ());
+          NS_LOG_UNCOND ("Dst addr: "<<dst->GetMac ()->GetShortAddress ());
+            // if (i != index)
+            //   {
+            //     dev->GetMac ()->PushPacketToQueue (nodes.Get (index)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()->GetMac ()->GetShortAddress ());
+            //   }
+        }
     }
 
   // lrWpanHelper.EnablePcapAll (std::string ("rf-mac-energy-data"), true);
@@ -148,37 +169,35 @@ int main (int argc, char *argv[])
   // lrWpanHelper.EnableAsciiAll (stream);
 
 
-  Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  // McpsDataIndicationCallback cb = MakeCallback (&DataIndication);
-  // dev->GetMac ()->SetMcpsDataIndicationCallback (cb);
-  // Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
-  Simulator::ScheduleWithContext (1, Seconds(1.0),
-                                  &LrWpanMac::SendRfeForEnergy,
-                                  dev2->GetMac ());
-  for (int i=1; i<10; i++)
-    {
-      if(i % 2 == 1)
-        {
-          Ptr<Packet> p = Create<Packet> (60);
-          McpsDataRequestParams params;
-          params.m_srcAddrMode = SHORT_ADDR;
-          params.m_dstAddrMode = SHORT_ADDR;
-          params.m_dstPanId = 0;
-          params.m_dstAddr = dev->GetMac ()->GetShortAddress ();
-          params.m_msduHandle = 0;
-          params.m_txOptions = TX_OPTION_NONE;
-          Simulator::ScheduleWithContext (i, Seconds(i),
-                                    &LrWpanMac::McpsDataRequest,
-                                    dev2->GetMac(), params, p);
-        }
-      else
-        {
-          Simulator::ScheduleWithContext (i, Seconds(i),
-                                    &LrWpanMac::SendRfeForEnergy,
-                                    dev->GetMac ());
-        }
-    }
+  // Ptr<LrWpanSensorNetDevice> dev ((nodes.Get (1)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  // Ptr<LrWpanSensorNetDevice> dev2 ((nodes.Get (0)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()));
+  // Simulator::ScheduleWithContext (1, Seconds(1.0),
+  //                                 &LrWpanMac::SendRfeForEnergy,
+  //                                 dev2->GetMac ());
+  // for (int i=1; i<10; i++)
+  //   {
+  //     if(i % 2 == 1)
+  //       {
+  //         Ptr<Packet> p = Create<Packet> (60);
+  //         McpsDataRequestParams params;
+  //         params.m_srcAddrMode = SHORT_ADDR;
+  //         params.m_dstAddrMode = SHORT_ADDR;
+  //         params.m_dstPanId = 0;
+  //         params.m_dstAddr = dev->GetMac ()->GetShortAddress ();
+  //         params.m_msduHandle = 0;
+  //         params.m_txOptions = TX_OPTION_NONE;
+  //         Simulator::ScheduleWithContext (i, Seconds(i),
+  //                                   &LrWpanMac::McpsDataRequest,
+  //                                   dev2->GetMac(), params, p);
+  //       }
+  //     else
+  //       {
+  //         Simulator::ScheduleWithContext (i, Seconds(i),
+  //                                   &LrWpanMac::SendRfeForEnergy,
+  //                                   dev->GetMac ());
+  //       }
+  //   }
+
   // for (int i=0; i<100; i++)
   //   {
   //     Ptr<Packet> p = Create<Packet> (60);
@@ -186,14 +205,14 @@ int main (int argc, char *argv[])
   //     params.m_srcAddrMode = SHORT_ADDR;
   //     params.m_dstAddrMode = SHORT_ADDR;
   //     params.m_dstPanId = 0;
-  //     params.m_dstAddr = Mac16Address (std::string("00:02").c_str ());
+  //     params.m_dstAddr = dev->GetMac ()->GetShortAddress ();
   //     params.m_msduHandle = 0;
   //     params.m_txOptions = TX_OPTION_NONE;
   //     Simulator::ScheduleWithContext (i, Seconds(i),
   //                               &LrWpanMac::McpsDataRequest,
   //                               dev2->GetMac(), params, p);      
   //   }
-  Simulator::Stop (Seconds (100.0));
+  Simulator::Stop (Seconds (1000.0));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;

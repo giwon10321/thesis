@@ -617,12 +617,27 @@ public:
   double m_currentVoltage;
 
   double m_idx;
+  bool isProposed;
 
 
   /**
    * The packet which is currently being sent by the MAC layer.
    */
   Ptr<Packet> m_txPkt;  // XXX need packet buffer instead of single packet
+
+
+  struct TxQueueElement
+  {
+    uint8_t txQMsduHandle; //!< MSDU Handle
+    Ptr<Packet> txQPkt;    //!< Queued packet
+  };
+
+  /**
+   * The transmit queue used by the MAC.
+   */
+  std::deque<TxQueueElement*> m_txQueue;
+
+  void PushPacketToQueue (Mac16Address dstAddr);
 
   
 protected:
@@ -634,11 +649,6 @@ private:
   /**
    * Helper structure for managing transmission queue elements.
    */
-  struct TxQueueElement
-  {
-    uint8_t txQMsduHandle; //!< MSDU Handle
-    Ptr<Packet> txQPkt;    //!< Queued packet
-  };
 
   /**
    * Send an acknowledgment packet for the given sequence number.
@@ -858,11 +868,6 @@ private:
    * really supported.
    */
   Mac64Address m_selfExt;
-
-  /**
-   * The transmit queue used by the MAC.
-   */
-  std::deque<TxQueueElement*> m_txQueue;
 
   /**
    * The number of already used retransmission for the currently transmitted

@@ -22,11 +22,19 @@ LrWpanEdtNetDevice::GetTypeId(void)
 	return tid;
 }
 
-LrWpanEdtNetDevice::LrWpanEdtNetDevice (void)
+LrWpanEdtNetDevice::LrWpanEdtNetDevice ()
 	: LrWpanNetDevice ()
 {
 	NS_LOG_FUNCTION (this);
 	GetMac ()->SetDeviceType (MAC_FOR_EDT);
+}
+	
+LrWpanEdtNetDevice::LrWpanEdtNetDevice (bool isProposed)
+	: LrWpanNetDevice ()
+{
+	NS_LOG_FUNCTION (this);
+	GetMac ()->SetDeviceType (MAC_FOR_EDT);
+	GetMac ()->isProposed = isProposed;
 	GetPhy ()->m_phyPIBAttributes.phyCurrentChannel = 11;
   	GetPhy ()->m_phyPIBAttributes.phyTransmitPower = 30;
 

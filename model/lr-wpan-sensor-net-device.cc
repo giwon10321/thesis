@@ -1,4 +1,6 @@
 #include "lr-wpan-sensor-net-device.h"
+#include "lr-wpan-spectrum-value-helper.h"
+#include <ns3/spectrum-value.h>
 
 #include <ns3/simulator.h>
 #include <ns3/log.h>
@@ -53,6 +55,14 @@ LrWpanSensorNetDevice::LrWpanSensorNetDevice (void)
  	GetMac ()->m_currentVoltage = m_maxVoltage;
 	GetMac ()->SetDeviceType (MAC_FOR_SENSOR);
 
+	GetPhy ()->m_phyPIBAttributes.phyCurrentChannel = 11;
+	GetPhy ()->m_phyPIBAttributes.phyTransmitPower = 10;
+
+	LrWpanSpectrumValueHelper psdHelper;
+	GetPhy ()->m_txPsd = psdHelper.CreateTxPowerSpectralDensity (GetPhy ()->m_phyPIBAttributes.phyTransmitPower,
+                                                  GetPhy ()->m_phyPIBAttributes.phyCurrentChannel);
+
+
 	GetMac ()->SetRfMacEnergyIndicationCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyIndication, this));
 	GetPhy ()->SetRfMacEnergyConsumtionCallback (MakeCallback(&LrWpanSensorNetDevice::RfMacEnergyConsumtion, this));
 }
@@ -74,7 +84,7 @@ void
 LrWpanSensorNetDevice::DoInitialize (void)
 {
 	NS_LOG_FUNCTION (this);
-	Simulator::ScheduleNow (&LrWpanSensorNetDevice::Update, this);
+	// Simulator::ScheduleNow (&LrWpanSensorNetDevice::Update, this);
 	LrWpanNetDevice::DoInitialize ();
 }
 
@@ -89,39 +99,41 @@ LrWpanSensorNetDevice::RfMacEnergyIndication (double energy)
 {
 	NS_LOG_DEBUG ("Received energy: "<<energy);
 	double volt = energy / m_q;
-	NS_LOG_DEBUG ("Voltage: "<<volt);
 	m_currentVoltage += volt;
 	if(m_currentVoltage > m_maxVoltage)
 		{
 			m_currentVoltage = m_maxVoltage;	
 		}
+	NS_LOG_DEBUG ("Voltage: "<<volt <<" Current: "<<m_currentVoltage);
 	GetMac ()->m_currentVoltage = m_currentVoltage;
-	// m_updateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::Update, this);
+	// if(m_updateEvent.IsExpired ())
+	// 	{
+	// 		m_updateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::Update, this);
+	// 	}
 }
 
 void
 LrWpanSensorNetDevice::RfMacEnergyConsumtion (double energy)
 {
 	NS_LOG_DEBUG ("Consumed energy: "<<energy);
-	//V = E / Q
 	double volt = energy / m_q;
-	NS_LOG_DEBUG ("Voltage: "<<volt);
 	m_currentVoltage -= volt;
+	NS_LOG_DEBUG ("Voltage: "<<volt <<" Current: "<<m_currentVoltage);
 	GetMac ()->m_currentVoltage = m_currentVoltage;
-	// this->CheckVoltage ();
+	this->CheckVoltage ();
 }
 
 void
 LrWpanSensorNetDevice::Update (void)
 {
 	// NS_LOG_FUNCTION (this);
-	m_updateEvent.Cancel ();
-	if (Simulator::IsFinished ())
-		{
-			NS_LOG_DEBUG ("Simulation Finished");
-			return ;
-		}
-	// m_currentVoltage -= 0.1;
+	// m_updateEvent.Cancel ();
+	// if (Simulator::IsFinished ())
+	// 	{
+	// 		NS_LOG_DEBUG ("Simulation Finished");
+	// 		return ;
+	// 	}
+	// m_currentVoltage -= 0.01;
 	// this->CheckVoltage ();
 	// m_updateEvent = Simulator::Schedule (m_updateInterval, &LrWpanSensorNetDevice::Update, this);
 }
@@ -129,8 +141,10 @@ LrWpanSensorNetDevice::Update (void)
 void
 LrWpanSensorNetDevice::CheckVoltage (void)
 {
+	NS_LOG_FUNCTION (this);
 	if(m_currentVoltage <= m_minThresholdVoltage)
 		{
+			NS_LOG_DEBUG ("send rfe");
 			m_updateEvent.Cancel ();
 			this->SendRfe ();
 			return ;
