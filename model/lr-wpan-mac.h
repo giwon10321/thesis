@@ -639,6 +639,12 @@ public:
 
   void PushPacketToQueue (Mac16Address dstAddr);
 
+  /**
+   * Check the transmission queue. If there are packets in the transmission
+   * queue and the MAC is idle, pick the first one and initiate a packet
+   * transmission.
+   */
+  void CheckQueue (void);
   
 protected:
   // Inherited from Object.
@@ -683,13 +689,6 @@ private:
    * \return true, if the packet should be retransmitted, false otherwise.
    */
   bool PrepareRetransmission (void);
-
-  /**
-   * Check the transmission queue. If there are packets in the transmission
-   * queue and the MAC is idle, pick the first one and initiate a packet
-   * transmission.
-   */
-  void CheckQueue (void);
 
   /**
    * The trace source fired when packets are considered as successfully sent

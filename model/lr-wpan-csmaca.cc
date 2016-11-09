@@ -62,6 +62,10 @@ LrWpanCsmaCa::LrWpanCsmaCa ()
   m_random = CreateObject<UniformRandomVariable> ();
   m_BE = m_macMinBE;
   m_ccaRequestRunning = false;
+
+  m_rfMacMinCW = 32;
+  m_rfMacMaxCW = 1024;
+  m_rfMacCurrentCW = m_rfMacMinCW;
 }
 
 LrWpanCsmaCa::~LrWpanCsmaCa ()
@@ -302,7 +306,7 @@ LrWpanCsmaCa::PerformRfMacBackoffDelay (void)
       }
     else if (typeTag.IsData ())
       {
-        m_rfMacBackOffTime = m_mac->GetDifsOfData () + MicroSeconds ((uint64_t)m_random->GetValue (32, 1025) * (m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds () + ((m_mac->m_maxVoltage - m_mac->m_currentVoltage) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage)) 
+        m_rfMacBackOffTime = m_mac->GetDifsOfData () + MicroSeconds ((uint64_t)m_random->GetValue (0, m_rfMacCurrentCW) * (m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds () + ((m_mac->m_maxVoltage - m_mac->m_currentVoltage) / (m_mac->m_maxVoltage - m_mac->m_minThresholdVoltage)) 
         * (m_mac->GetSlotTimeOfData ().GetMicroSeconds () - m_mac->GetSlotTimeOfEnergy ().GetMicroSeconds ())));
         NS_LOG_LOGIC ("Unslotted rf mac backoff: backoff for data " << m_rfMacBackOffTime.GetMicroSeconds () << " us");
       }  

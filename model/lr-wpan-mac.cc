@@ -910,9 +910,15 @@ LrWpanMac::SendRfeForEnergy (void)
     }
   ackPacket->AddTrailer (macTrailer);
 
-  m_txPkt = ackPacket;
+  // m_txPkt = ackPacket;
+  // Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
 
-  Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CSMA);
+  TxQueueElement *txQElement = new TxQueueElement;
+  txQElement->txQMsduHandle = 0;
+  txQElement->txQPkt = ackPacket;
+  m_txQueue.push_front (txQElement);
+
+  CheckQueue ();
 }
 
 
@@ -969,7 +975,9 @@ LrWpanMac::SendAckAfterCfe (void)
   typeTag.Set (RfMacTypeTag::RF_MAC_CFE_ACK);
 
   //need to calculate charging time T
-  double requiredEnergy = 0.5 * 36 * (m_maxThresholdVoltage*m_maxThresholdVoltage - m_minThresholdVoltage*m_minThresholdVoltage);
+  double idx = (m_tx + m_rx)/ (m_tx + m_rx);
+  double maxThresholdVoltage = idx * (m_maxVoltage - m_minVoltage) + m_minVoltage;
+  double requiredEnergy = 0.5 * 36 * (maxThresholdVoltage * maxThresholdVoltage - m_minThresholdVoltage * m_minThresholdVoltage);
   double time = requiredEnergy * 2 * m_slotTimeOfEnergy.GetSeconds () / (m_receivedEnergyFromFirstSlot + m_receivedEnergyFromSecondSlot);
   NS_LOG_DEBUG ("max v: "<<m_maxThresholdVoltage<< " min v: "<<m_minThresholdVoltage<< " required energy: "<<requiredEnergy<<" rx_energy: "<<m_receivedEnergyFromFirstSlot+m_receivedEnergyFromSecondSlot<<" charging time: "<<time <<" slot: "<<m_slotTimeOfEnergy.GetSeconds ());
   NS_LOG_DEBUG ("m_rx: "<<m_rx<<" m_tx: "<<m_tx);
@@ -1179,6 +1187,7 @@ LrWpanMac::PdDataConfirm (LrWpanPhyEnumeration status)
               if (typeTag.IsRfe ())
                 {
                   m_setMacState = Simulator::ScheduleNow (&LrWpanMac::SetLrWpanMacState, this, MAC_CFE_PENDING);
+                  RemoveFirstTxQElement ();
                 }
               else if (typeTag.IsCfe ())
                 {
@@ -1516,7 +1525,7 @@ LrWpanMac::PushPacketToQueue (Mac16Address dstAddr)
 {
   NS_LOG_FUNCTION (this);
   
-  Ptr<Packet> p = Create<Packet> (0);
+  Ptr<Packet> p = Create<Packet> (60);
 
   RfMacTypeTag typeTag;
   typeTag.Set (RfMacTypeTag::RF_MAC_DATA);

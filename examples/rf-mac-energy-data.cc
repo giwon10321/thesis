@@ -155,13 +155,16 @@ int main (int argc, char *argv[])
         {
           uint32_t index = randomNumber->GetInteger ();
           Ptr<LrWpanSensorNetDevice> dst (nodes.Get (index)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ());
-          NS_LOG_UNCOND ("Dst addr: "<<dst->GetMac ()->GetShortAddress ());
-            // if (i != index)
-            //   {
-            //     dev->GetMac ()->PushPacketToQueue (nodes.Get (index)->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ()->GetMac ()->GetShortAddress ());
-            //   }
+          // NS_LOG_UNCOND ("Dst addr: "<<dst->GetMac ()->GetShortAddress ());
+          if (i != index)
+            {
+               dev->GetMac ()->PushPacketToQueue (dst->GetMac ()->GetShortAddress ());
+            }
         }
     }
+
+  Ptr<LrWpanSensorNetDevice> starter (nodes.Get (randomNumber->GetInteger ())->GetDevice (0)->GetObject<LrWpanSensorNetDevice> ());
+  starter->GetMac ()->CheckQueue ();
 
   // lrWpanHelper.EnablePcapAll (std::string ("rf-mac-energy-data"), true);
   // AsciiTraceHelper ascii;

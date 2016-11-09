@@ -343,6 +343,10 @@ private:
   Time m_rfMacTimerLastUpdatedTime;
 
   EventId m_rfMacBackOffEvent;
+
+  uint32_t m_rfMacMinCW;
+  uint32_t m_rfMacMaxCW;
+  uint32_t m_rfMacCurrentCW;
 };
 
 }
